@@ -1,0 +1,31 @@
+# app/db/models/city.py
+from sqlalchemy import Column, Integer, String, DateTime, func, ForeignKey # Ensure ForeignKey is imported
+from sqlalchemy.orm import relationship  # Ensure relationship is imported
+from app.db.base_class import Base
+# Import related models only for type hinting if needed, avoid circular imports at runtime
+
+class City(Base):
+    __tablename__ = "cities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True, nullable=False)
+
+    # --- Foreign Key to Country ---
+    country_id = Column(Integer, ForeignKey("countries.id"), nullable=False) # Assuming city must have country
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # --- Relationships ---
+
+    # Relationship to Country model (Many Cities to One Country)
+    # 'back_populates' links this to the 'cities' attribute in the Country model
+    country = relationship("Country", back_populates="cities")
+
+    # Relationship to Place model (One City to Many Places)
+    # 'back_populates' links this to the 'city' attribute in the Place model
+    # cascade="all, delete-orphan" could be added if deleting a city should delete its places
+    places = relationship("Place", back_populates="city") # No cascade by default here
+
+    # Relationship to CityImage model (One City to Many Images)
+    # 'back_populates' links to the 'city' attribute in CityImage
+    images = relationship("CityImage", back_populates="city", cascade="all, delete-orphan")
