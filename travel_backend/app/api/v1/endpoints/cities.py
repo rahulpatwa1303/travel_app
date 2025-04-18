@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Path, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Any
 
@@ -6,6 +6,9 @@ from app import crud, schemas # Import top-level crud and schemas
 from app.api import deps # Import dependencies (like get_db)
 from app.core.config import settings # Import settings for defaults
 from app.schemas import City as CitySchema # Import and potentially alias
+from app.schemas import City as CityListSchema # Schema for list
+from app.schemas import CityDetail as CityDetailSchema # Schema for detail
+
 
 router = APIRouter()
 
@@ -54,3 +57,31 @@ async def read_popular_cities(
 
 # You can add other city-related endpoints to this router later
 # e.g., GET /cities/{city_id}
+@router.get(
+    "/{city_id}",
+    response_model=CityDetailSchema,
+    summary="Get City Details",
+    description="Retrieves detailed information for a specific city, including current weather.",
+    responses={404: {"description": "City not found"}}
+)
+async def read_city_detail(
+    background_tasks: BackgroundTasks, # Needed for underlying image/detail fetching
+    city_id: int = Path(..., title="The ID of the city to retrieve", ge=1),
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    """
+    Retrieves comprehensive details for a single city, including:
+    - Basic info (name, country)
+    - Cached images
+    - Cached description, travel info (if available)
+    - Live or recently cached weather data
+    """
+    city_details = await crud.crud_city.get_city_details(
+        db=db, city_id=city_id, background_tasks=background_tasks
+    )
+
+    if not city_details:
+        raise HTTPException(status_code=404, detail="City not found")
+
+    # FastAPI validates the returned dict against CityDetailSchema
+    return city_details

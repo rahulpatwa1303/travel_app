@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:travel_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:travel_app/features/places/presentation/screens/city_details_screen.dart';
 
 // Import your screens
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -15,6 +16,7 @@ class AppRoutePaths {
   static const String login = '/login';
   static const String home = '/home';
   static const String profile = '/profile';
+  static const String cityDetails = '/place/:placeId';
 }
 
 // REMOVE the top-level key definitions:
@@ -75,7 +77,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: rootNavigatorKey, // Use the key defined above
         builder: (context, state) => LoginScreen(),
       ),
-
+      GoRoute(
+        path: AppRoutePaths.cityDetails, // e.g., '/place/:placeId'
+        name: 'city_details',
+        parentNavigatorKey: rootNavigatorKey, // IMPORTANT: Use ROOT key
+        builder: (context, state) {
+          // Extract the placeId from the path parameters
+          final placeId = state.pathParameters['placeId'];
+          if (placeId == null) {
+            // Handle error: ID is missing, maybe redirect or show error page
+            return Scaffold(
+              body: Center(child: Text("Error: Missing Place ID")),
+            );
+          }
+          return CityDetailsScreen(placeId: placeId);
+        },
+      ),
       // ShellRoute for authenticated routes with Bottom Nav Bar
       ShellRoute(
         navigatorKey: shellNavigatorKey, // Use the key defined above

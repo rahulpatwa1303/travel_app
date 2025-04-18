@@ -6,28 +6,31 @@ part of 'places_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$topPlacesHash() => r'684d79bb035f7991f317a9e6d8e1e6675a335bb8';
+String _$topPlacesHash() => r'dbfb3f80848b5b24731b0f6eef3cee9ad643cd57';
 
 /// See also [topPlaces].
 @ProviderFor(topPlaces)
-final topPlacesProvider = AutoDisposeFutureProvider<List<TopPlace>>.internal(
-  topPlaces,
-  name: r'topPlacesProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$topPlacesHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final topPlacesProvider =
+    AutoDisposeFutureProvider<TopPlacesPaginatedResponse>.internal(
+      topPlaces,
+      name: r'topPlacesProvider',
+      debugGetCreateSourceHash:
+          const bool.fromEnvironment('dart.vm.product')
+              ? null
+              : _$topPlacesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef TopPlacesRef = AutoDisposeFutureProviderRef<List<TopPlace>>;
-String _$placesCategoriesHash() => r'd254e26745b3a428a046a915dbb5687fa3db74ab';
+typedef TopPlacesRef = AutoDisposeFutureProviderRef<TopPlacesPaginatedResponse>;
+String _$placesCategoriesHash() => r'62a647f3a3ade8ff6884a17ca3bca5e576afa634';
 
 /// See also [placesCategories].
 @ProviderFor(placesCategories)
 final placesCategoriesProvider =
-    AutoDisposeFutureProvider<List<PlacesCategories>>.internal(
+    AutoDisposeFutureProvider<List<PlacesCategory>>.internal(
       placesCategories,
       name: r'placesCategoriesProvider',
       debugGetCreateSourceHash:
@@ -41,6 +44,6 @@ final placesCategoriesProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef PlacesCategoriesRef =
-    AutoDisposeFutureProviderRef<List<PlacesCategories>>;
+    AutoDisposeFutureProviderRef<List<PlacesCategory>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

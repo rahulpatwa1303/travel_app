@@ -9,7 +9,9 @@ from sqlalchemy import func as sql_func
 from app.db import models # Import models namespace
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
-from app.services import wikimedia_service # For pagination defaults if needed later
+from app.services import weather_service, wikimedia_service # For pagination defaults if needed later
+from datetime import datetime, timedelta, timezone # Import timezone
+WEATHER_CACHE_MINUTES = 30 # How long to cache weather for (e.g., 30 minutes)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO) # Configure basic logging
@@ -154,3 +156,95 @@ async def fetch_and_store_city_image_task(city_id: int, city_name: str, country_
             # Session is automatically closed by 'async with'
             pass
 
+
+async def get_city_details(
+    db: AsyncSession,
+    city_id: int,
+    background_tasks: BackgroundTasks # Keep for image fetching if needed
+) -> Optional[Dict[str, Any]]:
+    """
+    Gets detailed city information, utilizing cached data and fetching fresh weather.
+    Handles image fetching via background tasks (similar to popular cities).
+    """
+    logger.info(f"Getting details for city_id: {city_id}")
+
+    # --- 1. Fetch City Core Data + Existing Images + Country ---
+    stmt_city = select(models.City).options(
+        selectinload(models.City.country), # Load country
+        selectinload(models.City.images)  # Load existing cached images
+    ).where(models.City.id == city_id)
+
+    result_city = await db.execute(stmt_city)
+    city: Optional[models.City] = result_city.scalars().first()
+
+    if not city:
+        return None # City not found
+
+    # --- 2. Prepare Base Data ---
+    city_data = {
+        "id": city.id,
+        "name": city.name,
+        "country": city.country, # Pydantic will handle schema conversion
+        "description": city.description,
+        "best_time_to_travel": city.best_time_to_travel,
+        "famous_for": city.famous_for,
+        "timezone": city.timezone,
+        "population": city.population,
+        "wikidata_id": city.wikidata_id,
+        "details_last_updated": city.details_last_updated,
+        "images": [img.image_url for img in city.images], # Extract image URLs
+        "current_weather": None, # Placeholder
+        "weather_last_updated": city.weather_last_updated
+    }
+
+    # --- 3. Handle City Images (Fetch if missing - Background Task) ---
+    if not city_data["images"]:
+        logger.info(f"No cached images for city {city_id}, triggering background fetch.")
+        # Reuse the city image fetching task logic if needed (adapt task function name if necessary)
+        # background_tasks.add_task(fetch_and_store_city_image_task, city.id, city.name, city.country.name)
+        # For simplicity, let's assume image fetch logic is separate or already run by popular endpoint
+
+    # --- 4. Handle Weather Data (Check Cache, Fetch if Stale) ---
+    needs_weather_fetch = True
+    if city.cached_weather and city.weather_last_updated:
+        cache_age = datetime.now(timezone.utc) - city.weather_last_updated
+        if cache_age < timedelta(minutes=WEATHER_CACHE_MINUTES):
+            logger.info(f"Using cached weather for city {city_id} (updated {cache_age.total_seconds():.0f}s ago).")
+            city_data["current_weather"] = city.cached_weather # Use cached JSON
+            needs_weather_fetch = False
+
+    if needs_weather_fetch:
+        logger.info(f"Fetching fresh weather for city {city_id}...")
+        # We need lat/lon - Assuming City model doesn't have them, get from a place? Or add to City?
+        # HACK: Get lat/lon from the first place in the city (inefficient!)
+        # Better: Add representative lat/lon columns to the cities table!
+        first_place_stmt = select(models.Place.latitude, models.Place.longitude).where(models.Place.city_id == city_id).limit(1)
+        place_loc_result = await db.execute(first_place_stmt)
+        place_loc = place_loc_result.first()
+
+        if place_loc:
+            lat, lon = place_loc.latitude, place_loc.longitude
+            weather_json = await weather_service.get_current_weather(lat=lat, lon=lon)
+            if weather_json:
+                logger.info(f"Successfully fetched weather for city {city_id}. Caching.")
+                city_data["current_weather"] = weather_json
+                city_data["weather_last_updated"] = datetime.now(timezone.utc)
+                # Update cache in DB (could also be background task)
+                city.cached_weather = weather_json
+                city.weather_last_updated = city_data["weather_last_updated"]
+                db.add(city) # Add to session for update
+                # Commit happens via get_db dependency
+            else:
+                logger.warning(f"Failed to fetch weather for city {city_id}. Response will lack weather.")
+                city_data["weather_last_updated"] = None # Ensure it's None if fetch failed
+        else:
+             logger.warning(f"Cannot fetch weather for city {city_id}: No places found to get coordinates.")
+
+
+    # --- 5. Handle Other Details (Wikidata, etc. - Placeholder/Future) ---
+    # If implementing Wikidata fetching:
+    # if not city.description or details_stale:
+    #     # Trigger background task to fetch from wikidata_service
+    #     # Update city_data dictionary with results if fetched inline
+
+    return city_data

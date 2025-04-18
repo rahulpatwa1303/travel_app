@@ -1,5 +1,8 @@
+import datetime
 from pydantic import BaseModel, HttpUrl
 from typing import List, Optional
+
+from app.schemas.weather import CurrentWeather
 from .country import Country # Import the Country schema
 
 # Shared base properties
@@ -24,3 +27,15 @@ class City(CityInDBBase):
      # Pydantic will automatically populate this from the City.country relationship
     country: Country
     images: List[HttpUrl] = []
+
+class CityDetail(City): # Inherits fields from City list schema (id, name, country, images)
+    description: Optional[str] = None
+    best_time_to_travel: Optional[str] = None
+    famous_for: Optional[str] = None
+    timezone: Optional[str] = None
+    population: Optional[int] = None
+    wikidata_id: Optional[str] = None
+    details_last_updated: Optional[datetime.datetime] = None
+    # Add the nested weather data
+    current_weather: Optional[CurrentWeather] = None # <<< Embed weather details
+    weather_last_updated: Optional[datetime.datetime] = None

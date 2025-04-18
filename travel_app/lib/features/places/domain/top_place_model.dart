@@ -2,7 +2,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'top_place_model.freezed.dart'; // Will be generated
 part 'top_place_model.g.dart'; // Will be generated
-
 @freezed
 class TopPlace with _$TopPlace {
   const TopPlace._();
@@ -10,23 +9,14 @@ class TopPlace with _$TopPlace {
   const factory TopPlace({
     required int id,
     required String name,
-    required double latitude,
-    required double longitude,
-
-    String? website,
-    String? description,
-    int? osm_id,
-    Map<String, dynamic>? tags,
-    String? category,
-    double? relevance_score,
-    List<String>? reason,
-    double? distance_km,
-
-    @JsonKey(name: 'image_url') String? imageUrl, // ✅ Correct mapping here
+    required Country country,
+    List<String>? images,
   }) = _TopPlace;
 
   factory TopPlace.fromJson(Map<String, dynamic> json) =>
       _$TopPlaceFromJson(json);
+
+  String? get imageUrl => (images != null && images!.isNotEmpty) ? images!.first : null;
 
   bool get usesDefaultImage {
     if (imageUrl == null || imageUrl!.isEmpty) return true;
@@ -36,19 +26,41 @@ class TopPlace with _$TopPlace {
 }
 
 @freezed
-class PlacesCategories with _$PlacesCategories {
-  const factory PlacesCategories({
-    // Required fields
+class Country with _$Country {
+  const factory Country({
+    required int id,
     required String name,
-    required String display_name,
-    required String osm_key,
-    required String osm_value,
-  }) = _PlacesCategories;
+  }) = _Country;
 
-  factory PlacesCategories.fromJson(Map<String, dynamic> json) =>
-      _$PlacesCategoriesFromJson(json);
+  factory Country.fromJson(Map<String, dynamic> json) =>
+      _$CountryFromJson(json);
 }
 
+@freezed
+class PlacesCategory with _$PlacesCategory {
+  const factory PlacesCategory({
+    // `name` is the raw category string coming from the API
+    required String name,
+    // `displayName` is the value to be shown to users, computed automatically
+    required String displayName,
+  }) = _PlacesCategory;
+
+  // Custom factory to handle both String and Map<String, dynamic> JSON inputs.
+  factory PlacesCategory.fromJson(dynamic json) {
+    if (json is String) {
+      // Convert snake_case to title case for displayName.
+      final displayName = json
+          .split('_')
+          .map((word) => word.isNotEmpty 
+              ? '${word[0].toUpperCase()}${word.substring(1)}' 
+              : '')
+          .join(' ');
+      return PlacesCategory(name: json, displayName: displayName);
+    }  else {
+      throw Exception('Invalid JSON format for PlacesCategory');
+    }
+  }
+}
 // class PlacesByCategory with _$PlacesByCategory{
 //   const factory PlacesByCategory({
 //       required int id,

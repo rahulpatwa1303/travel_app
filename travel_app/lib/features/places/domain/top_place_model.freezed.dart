@@ -23,18 +23,8 @@ TopPlace _$TopPlaceFromJson(Map<String, dynamic> json) {
 mixin _$TopPlace {
   int get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
-  double get latitude => throw _privateConstructorUsedError;
-  double get longitude => throw _privateConstructorUsedError;
-  String? get website => throw _privateConstructorUsedError;
-  String? get description => throw _privateConstructorUsedError;
-  int? get osm_id => throw _privateConstructorUsedError;
-  Map<String, dynamic>? get tags => throw _privateConstructorUsedError;
-  String? get category => throw _privateConstructorUsedError;
-  double? get relevance_score => throw _privateConstructorUsedError;
-  List<String>? get reason => throw _privateConstructorUsedError;
-  double? get distance_km => throw _privateConstructorUsedError;
-  @JsonKey(name: 'image_url')
-  String? get imageUrl => throw _privateConstructorUsedError;
+  Country get country => throw _privateConstructorUsedError;
+  List<String>? get images => throw _privateConstructorUsedError;
 
   /// Serializes this TopPlace to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -51,21 +41,9 @@ abstract class $TopPlaceCopyWith<$Res> {
   factory $TopPlaceCopyWith(TopPlace value, $Res Function(TopPlace) then) =
       _$TopPlaceCopyWithImpl<$Res, TopPlace>;
   @useResult
-  $Res call({
-    int id,
-    String name,
-    double latitude,
-    double longitude,
-    String? website,
-    String? description,
-    int? osm_id,
-    Map<String, dynamic>? tags,
-    String? category,
-    double? relevance_score,
-    List<String>? reason,
-    double? distance_km,
-    @JsonKey(name: 'image_url') String? imageUrl,
-  });
+  $Res call({int id, String name, Country country, List<String>? images});
+
+  $CountryCopyWith<$Res> get country;
 }
 
 /// @nodoc
@@ -85,17 +63,8 @@ class _$TopPlaceCopyWithImpl<$Res, $Val extends TopPlace>
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? latitude = null,
-    Object? longitude = null,
-    Object? website = freezed,
-    Object? description = freezed,
-    Object? osm_id = freezed,
-    Object? tags = freezed,
-    Object? category = freezed,
-    Object? relevance_score = freezed,
-    Object? reason = freezed,
-    Object? distance_km = freezed,
-    Object? imageUrl = freezed,
+    Object? country = null,
+    Object? images = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -109,64 +78,29 @@ class _$TopPlaceCopyWithImpl<$Res, $Val extends TopPlace>
                     ? _value.name
                     : name // ignore: cast_nullable_to_non_nullable
                         as String,
-            latitude:
-                null == latitude
-                    ? _value.latitude
-                    : latitude // ignore: cast_nullable_to_non_nullable
-                        as double,
-            longitude:
-                null == longitude
-                    ? _value.longitude
-                    : longitude // ignore: cast_nullable_to_non_nullable
-                        as double,
-            website:
-                freezed == website
-                    ? _value.website
-                    : website // ignore: cast_nullable_to_non_nullable
-                        as String?,
-            description:
-                freezed == description
-                    ? _value.description
-                    : description // ignore: cast_nullable_to_non_nullable
-                        as String?,
-            osm_id:
-                freezed == osm_id
-                    ? _value.osm_id
-                    : osm_id // ignore: cast_nullable_to_non_nullable
-                        as int?,
-            tags:
-                freezed == tags
-                    ? _value.tags
-                    : tags // ignore: cast_nullable_to_non_nullable
-                        as Map<String, dynamic>?,
-            category:
-                freezed == category
-                    ? _value.category
-                    : category // ignore: cast_nullable_to_non_nullable
-                        as String?,
-            relevance_score:
-                freezed == relevance_score
-                    ? _value.relevance_score
-                    : relevance_score // ignore: cast_nullable_to_non_nullable
-                        as double?,
-            reason:
-                freezed == reason
-                    ? _value.reason
-                    : reason // ignore: cast_nullable_to_non_nullable
+            country:
+                null == country
+                    ? _value.country
+                    : country // ignore: cast_nullable_to_non_nullable
+                        as Country,
+            images:
+                freezed == images
+                    ? _value.images
+                    : images // ignore: cast_nullable_to_non_nullable
                         as List<String>?,
-            distance_km:
-                freezed == distance_km
-                    ? _value.distance_km
-                    : distance_km // ignore: cast_nullable_to_non_nullable
-                        as double?,
-            imageUrl:
-                freezed == imageUrl
-                    ? _value.imageUrl
-                    : imageUrl // ignore: cast_nullable_to_non_nullable
-                        as String?,
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of TopPlace
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $CountryCopyWith<$Res> get country {
+    return $CountryCopyWith<$Res>(_value.country, (value) {
+      return _then(_value.copyWith(country: value) as $Val);
+    });
   }
 }
 
@@ -179,21 +113,10 @@ abstract class _$$TopPlaceImplCopyWith<$Res>
   ) = __$$TopPlaceImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    int id,
-    String name,
-    double latitude,
-    double longitude,
-    String? website,
-    String? description,
-    int? osm_id,
-    Map<String, dynamic>? tags,
-    String? category,
-    double? relevance_score,
-    List<String>? reason,
-    double? distance_km,
-    @JsonKey(name: 'image_url') String? imageUrl,
-  });
+  $Res call({int id, String name, Country country, List<String>? images});
+
+  @override
+  $CountryCopyWith<$Res> get country;
 }
 
 /// @nodoc
@@ -212,17 +135,8 @@ class __$$TopPlaceImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? latitude = null,
-    Object? longitude = null,
-    Object? website = freezed,
-    Object? description = freezed,
-    Object? osm_id = freezed,
-    Object? tags = freezed,
-    Object? category = freezed,
-    Object? relevance_score = freezed,
-    Object? reason = freezed,
-    Object? distance_km = freezed,
-    Object? imageUrl = freezed,
+    Object? country = null,
+    Object? images = freezed,
   }) {
     return _then(
       _$TopPlaceImpl(
@@ -236,61 +150,16 @@ class __$$TopPlaceImplCopyWithImpl<$Res>
                 ? _value.name
                 : name // ignore: cast_nullable_to_non_nullable
                     as String,
-        latitude:
-            null == latitude
-                ? _value.latitude
-                : latitude // ignore: cast_nullable_to_non_nullable
-                    as double,
-        longitude:
-            null == longitude
-                ? _value.longitude
-                : longitude // ignore: cast_nullable_to_non_nullable
-                    as double,
-        website:
-            freezed == website
-                ? _value.website
-                : website // ignore: cast_nullable_to_non_nullable
-                    as String?,
-        description:
-            freezed == description
-                ? _value.description
-                : description // ignore: cast_nullable_to_non_nullable
-                    as String?,
-        osm_id:
-            freezed == osm_id
-                ? _value.osm_id
-                : osm_id // ignore: cast_nullable_to_non_nullable
-                    as int?,
-        tags:
-            freezed == tags
-                ? _value._tags
-                : tags // ignore: cast_nullable_to_non_nullable
-                    as Map<String, dynamic>?,
-        category:
-            freezed == category
-                ? _value.category
-                : category // ignore: cast_nullable_to_non_nullable
-                    as String?,
-        relevance_score:
-            freezed == relevance_score
-                ? _value.relevance_score
-                : relevance_score // ignore: cast_nullable_to_non_nullable
-                    as double?,
-        reason:
-            freezed == reason
-                ? _value._reason
-                : reason // ignore: cast_nullable_to_non_nullable
+        country:
+            null == country
+                ? _value.country
+                : country // ignore: cast_nullable_to_non_nullable
+                    as Country,
+        images:
+            freezed == images
+                ? _value._images
+                : images // ignore: cast_nullable_to_non_nullable
                     as List<String>?,
-        distance_km:
-            freezed == distance_km
-                ? _value.distance_km
-                : distance_km // ignore: cast_nullable_to_non_nullable
-                    as double?,
-        imageUrl:
-            freezed == imageUrl
-                ? _value.imageUrl
-                : imageUrl // ignore: cast_nullable_to_non_nullable
-                    as String?,
       ),
     );
   }
@@ -302,19 +171,9 @@ class _$TopPlaceImpl extends _TopPlace {
   const _$TopPlaceImpl({
     required this.id,
     required this.name,
-    required this.latitude,
-    required this.longitude,
-    this.website,
-    this.description,
-    this.osm_id,
-    final Map<String, dynamic>? tags,
-    this.category,
-    this.relevance_score,
-    final List<String>? reason,
-    this.distance_km,
-    @JsonKey(name: 'image_url') this.imageUrl,
-  }) : _tags = tags,
-       _reason = reason,
+    required this.country,
+    final List<String>? images,
+  }) : _images = images,
        super._();
 
   factory _$TopPlaceImpl.fromJson(Map<String, dynamic> json) =>
@@ -325,48 +184,20 @@ class _$TopPlaceImpl extends _TopPlace {
   @override
   final String name;
   @override
-  final double latitude;
+  final Country country;
+  final List<String>? _images;
   @override
-  final double longitude;
-  @override
-  final String? website;
-  @override
-  final String? description;
-  @override
-  final int? osm_id;
-  final Map<String, dynamic>? _tags;
-  @override
-  Map<String, dynamic>? get tags {
-    final value = _tags;
+  List<String>? get images {
+    final value = _images;
     if (value == null) return null;
-    if (_tags is EqualUnmodifiableMapView) return _tags;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableMapView(value);
-  }
-
-  @override
-  final String? category;
-  @override
-  final double? relevance_score;
-  final List<String>? _reason;
-  @override
-  List<String>? get reason {
-    final value = _reason;
-    if (value == null) return null;
-    if (_reason is EqualUnmodifiableListView) return _reason;
+    if (_images is EqualUnmodifiableListView) return _images;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(value);
   }
 
   @override
-  final double? distance_km;
-  @override
-  @JsonKey(name: 'image_url')
-  final String? imageUrl;
-
-  @override
   String toString() {
-    return 'TopPlace(id: $id, name: $name, latitude: $latitude, longitude: $longitude, website: $website, description: $description, osm_id: $osm_id, tags: $tags, category: $category, relevance_score: $relevance_score, reason: $reason, distance_km: $distance_km, imageUrl: $imageUrl)';
+    return 'TopPlace(id: $id, name: $name, country: $country, images: $images)';
   }
 
   @override
@@ -376,24 +207,8 @@ class _$TopPlaceImpl extends _TopPlace {
             other is _$TopPlaceImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.latitude, latitude) ||
-                other.latitude == latitude) &&
-            (identical(other.longitude, longitude) ||
-                other.longitude == longitude) &&
-            (identical(other.website, website) || other.website == website) &&
-            (identical(other.description, description) ||
-                other.description == description) &&
-            (identical(other.osm_id, osm_id) || other.osm_id == osm_id) &&
-            const DeepCollectionEquality().equals(other._tags, _tags) &&
-            (identical(other.category, category) ||
-                other.category == category) &&
-            (identical(other.relevance_score, relevance_score) ||
-                other.relevance_score == relevance_score) &&
-            const DeepCollectionEquality().equals(other._reason, _reason) &&
-            (identical(other.distance_km, distance_km) ||
-                other.distance_km == distance_km) &&
-            (identical(other.imageUrl, imageUrl) ||
-                other.imageUrl == imageUrl));
+            (identical(other.country, country) || other.country == country) &&
+            const DeepCollectionEquality().equals(other._images, _images));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -402,17 +217,8 @@ class _$TopPlaceImpl extends _TopPlace {
     runtimeType,
     id,
     name,
-    latitude,
-    longitude,
-    website,
-    description,
-    osm_id,
-    const DeepCollectionEquality().hash(_tags),
-    category,
-    relevance_score,
-    const DeepCollectionEquality().hash(_reason),
-    distance_km,
-    imageUrl,
+    country,
+    const DeepCollectionEquality().hash(_images),
   );
 
   /// Create a copy of TopPlace
@@ -433,17 +239,8 @@ abstract class _TopPlace extends TopPlace {
   const factory _TopPlace({
     required final int id,
     required final String name,
-    required final double latitude,
-    required final double longitude,
-    final String? website,
-    final String? description,
-    final int? osm_id,
-    final Map<String, dynamic>? tags,
-    final String? category,
-    final double? relevance_score,
-    final List<String>? reason,
-    final double? distance_km,
-    @JsonKey(name: 'image_url') final String? imageUrl,
+    required final Country country,
+    final List<String>? images,
   }) = _$TopPlaceImpl;
   const _TopPlace._() : super._();
 
@@ -455,28 +252,9 @@ abstract class _TopPlace extends TopPlace {
   @override
   String get name;
   @override
-  double get latitude;
+  Country get country;
   @override
-  double get longitude;
-  @override
-  String? get website;
-  @override
-  String? get description;
-  @override
-  int? get osm_id;
-  @override
-  Map<String, dynamic>? get tags;
-  @override
-  String? get category;
-  @override
-  double? get relevance_score;
-  @override
-  List<String>? get reason;
-  @override
-  double? get distance_km;
-  @override
-  @JsonKey(name: 'image_url')
-  String? get imageUrl;
+  List<String>? get images;
 
   /// Create a copy of TopPlace
   /// with the given fields replaced by the non-null parameter values.
@@ -486,84 +264,58 @@ abstract class _TopPlace extends TopPlace {
       throw _privateConstructorUsedError;
 }
 
-PlacesCategories _$PlacesCategoriesFromJson(Map<String, dynamic> json) {
-  return _PlacesCategories.fromJson(json);
+Country _$CountryFromJson(Map<String, dynamic> json) {
+  return _Country.fromJson(json);
 }
 
 /// @nodoc
-mixin _$PlacesCategories {
-  // Required fields
+mixin _$Country {
+  int get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
-  String get display_name => throw _privateConstructorUsedError;
-  String get osm_key => throw _privateConstructorUsedError;
-  String get osm_value => throw _privateConstructorUsedError;
 
-  /// Serializes this PlacesCategories to a JSON map.
+  /// Serializes this Country to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
-  /// Create a copy of PlacesCategories
+  /// Create a copy of Country
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $PlacesCategoriesCopyWith<PlacesCategories> get copyWith =>
-      throw _privateConstructorUsedError;
+  $CountryCopyWith<Country> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class $PlacesCategoriesCopyWith<$Res> {
-  factory $PlacesCategoriesCopyWith(
-    PlacesCategories value,
-    $Res Function(PlacesCategories) then,
-  ) = _$PlacesCategoriesCopyWithImpl<$Res, PlacesCategories>;
+abstract class $CountryCopyWith<$Res> {
+  factory $CountryCopyWith(Country value, $Res Function(Country) then) =
+      _$CountryCopyWithImpl<$Res, Country>;
   @useResult
-  $Res call({
-    String name,
-    String display_name,
-    String osm_key,
-    String osm_value,
-  });
+  $Res call({int id, String name});
 }
 
 /// @nodoc
-class _$PlacesCategoriesCopyWithImpl<$Res, $Val extends PlacesCategories>
-    implements $PlacesCategoriesCopyWith<$Res> {
-  _$PlacesCategoriesCopyWithImpl(this._value, this._then);
+class _$CountryCopyWithImpl<$Res, $Val extends Country>
+    implements $CountryCopyWith<$Res> {
+  _$CountryCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
   final $Val _value;
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of PlacesCategories
+  /// Create a copy of Country
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? name = null,
-    Object? display_name = null,
-    Object? osm_key = null,
-    Object? osm_value = null,
-  }) {
+  $Res call({Object? id = null, Object? name = null}) {
     return _then(
       _value.copyWith(
+            id:
+                null == id
+                    ? _value.id
+                    : id // ignore: cast_nullable_to_non_nullable
+                        as int,
             name:
                 null == name
                     ? _value.name
                     : name // ignore: cast_nullable_to_non_nullable
-                        as String,
-            display_name:
-                null == display_name
-                    ? _value.display_name
-                    : display_name // ignore: cast_nullable_to_non_nullable
-                        as String,
-            osm_key:
-                null == osm_key
-                    ? _value.osm_key
-                    : osm_key // ignore: cast_nullable_to_non_nullable
-                        as String,
-            osm_value:
-                null == osm_value
-                    ? _value.osm_value
-                    : osm_value // ignore: cast_nullable_to_non_nullable
                         as String,
           )
           as $Val,
@@ -572,62 +324,41 @@ class _$PlacesCategoriesCopyWithImpl<$Res, $Val extends PlacesCategories>
 }
 
 /// @nodoc
-abstract class _$$PlacesCategoriesImplCopyWith<$Res>
-    implements $PlacesCategoriesCopyWith<$Res> {
-  factory _$$PlacesCategoriesImplCopyWith(
-    _$PlacesCategoriesImpl value,
-    $Res Function(_$PlacesCategoriesImpl) then,
-  ) = __$$PlacesCategoriesImplCopyWithImpl<$Res>;
+abstract class _$$CountryImplCopyWith<$Res> implements $CountryCopyWith<$Res> {
+  factory _$$CountryImplCopyWith(
+    _$CountryImpl value,
+    $Res Function(_$CountryImpl) then,
+  ) = __$$CountryImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String name,
-    String display_name,
-    String osm_key,
-    String osm_value,
-  });
+  $Res call({int id, String name});
 }
 
 /// @nodoc
-class __$$PlacesCategoriesImplCopyWithImpl<$Res>
-    extends _$PlacesCategoriesCopyWithImpl<$Res, _$PlacesCategoriesImpl>
-    implements _$$PlacesCategoriesImplCopyWith<$Res> {
-  __$$PlacesCategoriesImplCopyWithImpl(
-    _$PlacesCategoriesImpl _value,
-    $Res Function(_$PlacesCategoriesImpl) _then,
+class __$$CountryImplCopyWithImpl<$Res>
+    extends _$CountryCopyWithImpl<$Res, _$CountryImpl>
+    implements _$$CountryImplCopyWith<$Res> {
+  __$$CountryImplCopyWithImpl(
+    _$CountryImpl _value,
+    $Res Function(_$CountryImpl) _then,
   ) : super(_value, _then);
 
-  /// Create a copy of PlacesCategories
+  /// Create a copy of Country
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? name = null,
-    Object? display_name = null,
-    Object? osm_key = null,
-    Object? osm_value = null,
-  }) {
+  $Res call({Object? id = null, Object? name = null}) {
     return _then(
-      _$PlacesCategoriesImpl(
+      _$CountryImpl(
+        id:
+            null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                    as int,
         name:
             null == name
                 ? _value.name
                 : name // ignore: cast_nullable_to_non_nullable
-                    as String,
-        display_name:
-            null == display_name
-                ? _value.display_name
-                : display_name // ignore: cast_nullable_to_non_nullable
-                    as String,
-        osm_key:
-            null == osm_key
-                ? _value.osm_key
-                : osm_key // ignore: cast_nullable_to_non_nullable
-                    as String,
-        osm_value:
-            null == osm_value
-                ? _value.osm_value
-                : osm_value // ignore: cast_nullable_to_non_nullable
                     as String,
       ),
     );
@@ -636,92 +367,226 @@ class __$$PlacesCategoriesImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$PlacesCategoriesImpl implements _PlacesCategories {
-  const _$PlacesCategoriesImpl({
-    required this.name,
-    required this.display_name,
-    required this.osm_key,
-    required this.osm_value,
-  });
+class _$CountryImpl implements _Country {
+  const _$CountryImpl({required this.id, required this.name});
 
-  factory _$PlacesCategoriesImpl.fromJson(Map<String, dynamic> json) =>
-      _$$PlacesCategoriesImplFromJson(json);
+  factory _$CountryImpl.fromJson(Map<String, dynamic> json) =>
+      _$$CountryImplFromJson(json);
 
-  // Required fields
+  @override
+  final int id;
   @override
   final String name;
-  @override
-  final String display_name;
-  @override
-  final String osm_key;
-  @override
-  final String osm_value;
 
   @override
   String toString() {
-    return 'PlacesCategories(name: $name, display_name: $display_name, osm_key: $osm_key, osm_value: $osm_value)';
+    return 'Country(id: $id, name: $name)';
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$PlacesCategoriesImpl &&
-            (identical(other.name, name) || other.name == name) &&
-            (identical(other.display_name, display_name) ||
-                other.display_name == display_name) &&
-            (identical(other.osm_key, osm_key) || other.osm_key == osm_key) &&
-            (identical(other.osm_value, osm_value) ||
-                other.osm_value == osm_value));
+            other is _$CountryImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.name, name) || other.name == name));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, name, display_name, osm_key, osm_value);
+  int get hashCode => Object.hash(runtimeType, id, name);
 
-  /// Create a copy of PlacesCategories
+  /// Create a copy of Country
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
-  _$$PlacesCategoriesImplCopyWith<_$PlacesCategoriesImpl> get copyWith =>
-      __$$PlacesCategoriesImplCopyWithImpl<_$PlacesCategoriesImpl>(
-        this,
-        _$identity,
-      );
+  _$$CountryImplCopyWith<_$CountryImpl> get copyWith =>
+      __$$CountryImplCopyWithImpl<_$CountryImpl>(this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$PlacesCategoriesImplToJson(this);
+    return _$$CountryImplToJson(this);
   }
 }
 
-abstract class _PlacesCategories implements PlacesCategories {
-  const factory _PlacesCategories({
-    required final String name,
-    required final String display_name,
-    required final String osm_key,
-    required final String osm_value,
-  }) = _$PlacesCategoriesImpl;
+abstract class _Country implements Country {
+  const factory _Country({required final int id, required final String name}) =
+      _$CountryImpl;
 
-  factory _PlacesCategories.fromJson(Map<String, dynamic> json) =
-      _$PlacesCategoriesImpl.fromJson;
+  factory _Country.fromJson(Map<String, dynamic> json) = _$CountryImpl.fromJson;
 
-  // Required fields
+  @override
+  int get id;
   @override
   String get name;
-  @override
-  String get display_name;
-  @override
-  String get osm_key;
-  @override
-  String get osm_value;
 
-  /// Create a copy of PlacesCategories
+  /// Create a copy of Country
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$PlacesCategoriesImplCopyWith<_$PlacesCategoriesImpl> get copyWith =>
+  _$$CountryImplCopyWith<_$CountryImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+mixin _$PlacesCategory {
+  // `name` is the raw category string coming from the API
+  String get name =>
+      throw _privateConstructorUsedError; // `displayName` is the value to be shown to users, computed automatically
+  String get displayName => throw _privateConstructorUsedError;
+
+  /// Create a copy of PlacesCategory
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $PlacesCategoryCopyWith<PlacesCategory> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $PlacesCategoryCopyWith<$Res> {
+  factory $PlacesCategoryCopyWith(
+    PlacesCategory value,
+    $Res Function(PlacesCategory) then,
+  ) = _$PlacesCategoryCopyWithImpl<$Res, PlacesCategory>;
+  @useResult
+  $Res call({String name, String displayName});
+}
+
+/// @nodoc
+class _$PlacesCategoryCopyWithImpl<$Res, $Val extends PlacesCategory>
+    implements $PlacesCategoryCopyWith<$Res> {
+  _$PlacesCategoryCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of PlacesCategory
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? name = null, Object? displayName = null}) {
+    return _then(
+      _value.copyWith(
+            name:
+                null == name
+                    ? _value.name
+                    : name // ignore: cast_nullable_to_non_nullable
+                        as String,
+            displayName:
+                null == displayName
+                    ? _value.displayName
+                    : displayName // ignore: cast_nullable_to_non_nullable
+                        as String,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$PlacesCategoryImplCopyWith<$Res>
+    implements $PlacesCategoryCopyWith<$Res> {
+  factory _$$PlacesCategoryImplCopyWith(
+    _$PlacesCategoryImpl value,
+    $Res Function(_$PlacesCategoryImpl) then,
+  ) = __$$PlacesCategoryImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String name, String displayName});
+}
+
+/// @nodoc
+class __$$PlacesCategoryImplCopyWithImpl<$Res>
+    extends _$PlacesCategoryCopyWithImpl<$Res, _$PlacesCategoryImpl>
+    implements _$$PlacesCategoryImplCopyWith<$Res> {
+  __$$PlacesCategoryImplCopyWithImpl(
+    _$PlacesCategoryImpl _value,
+    $Res Function(_$PlacesCategoryImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of PlacesCategory
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? name = null, Object? displayName = null}) {
+    return _then(
+      _$PlacesCategoryImpl(
+        name:
+            null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                    as String,
+        displayName:
+            null == displayName
+                ? _value.displayName
+                : displayName // ignore: cast_nullable_to_non_nullable
+                    as String,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+
+class _$PlacesCategoryImpl implements _PlacesCategory {
+  const _$PlacesCategoryImpl({required this.name, required this.displayName});
+
+  // `name` is the raw category string coming from the API
+  @override
+  final String name;
+  // `displayName` is the value to be shown to users, computed automatically
+  @override
+  final String displayName;
+
+  @override
+  String toString() {
+    return 'PlacesCategory(name: $name, displayName: $displayName)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$PlacesCategoryImpl &&
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.displayName, displayName) ||
+                other.displayName == displayName));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, name, displayName);
+
+  /// Create a copy of PlacesCategory
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$PlacesCategoryImplCopyWith<_$PlacesCategoryImpl> get copyWith =>
+      __$$PlacesCategoryImplCopyWithImpl<_$PlacesCategoryImpl>(
+        this,
+        _$identity,
+      );
+}
+
+abstract class _PlacesCategory implements PlacesCategory {
+  const factory _PlacesCategory({
+    required final String name,
+    required final String displayName,
+  }) = _$PlacesCategoryImpl;
+
+  // `name` is the raw category string coming from the API
+  @override
+  String get name; // `displayName` is the value to be shown to users, computed automatically
+  @override
+  String get displayName;
+
+  /// Create a copy of PlacesCategory
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$PlacesCategoryImplCopyWith<_$PlacesCategoryImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

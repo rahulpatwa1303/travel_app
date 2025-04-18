@@ -31,8 +31,8 @@ class LoginScreen extends ConsumerWidget {
 
     // --- Placeholder for testing ---
     // TODO: Remove these default values in production
-    _emailController.text = 'traveler@example.com'; // Replace with actual test user
-    _passwordController.text = 'mysecretpassword!#'; // Replace with actual test password
+    _emailController.text = 'curluser@example.com'; // Replace with actual test user
+    _passwordController.text = 'curlpassword'; // Replace with actual test password
     // --- End Placeholder ---
 
     return Scaffold(

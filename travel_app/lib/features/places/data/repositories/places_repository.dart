@@ -10,6 +10,13 @@ final placesRepositoryProvider = Provider<PlacesRepository>((ref) {
   return PlacesRepository(dio);
 });
 
+class TopPlacesPaginatedResponse {
+  final List<TopPlace> places;
+  final bool hasMore; // Calculated based on list length vs limit
+
+  TopPlacesPaginatedResponse({required this.places, required this.hasMore});
+}
+
 class PlacesRepository {
   final Dio _dio;
 
@@ -60,77 +67,171 @@ class PlacesRepository {
     }
   }
 
-  Future<List<TopPlace>> getTopPlaces() async {
+  Future<TopPlacesPaginatedResponse> getTopPlaces({
+    required int offset,
+    required int limit,
+  }) async {
     try {
-      print("Fetching /places/top..."); // Debugging
-      final response = await _dio.get('/places/top'); // Call the new endpoint
+      print("Fetching /api/v1/cities/popular with offset: $offset, limit: $limit");
+      final response = await _dio.get(
+        '/api/v1/cities/popular', // Use the correct endpoint
+        queryParameters: {
+          'offset': offset,
+          'limit': limit,
+        },
+      );
 
       if (response.statusCode == 200 && response.data != null) {
-        // The response data is expected to be a List
         if (response.data is List) {
-          print("Received list data from /places/top"); // Debugging
+          print("Received list data from /api/v1/cities/popular");
           final List<dynamic> dataList = response.data as List<dynamic>;
-          // Parse each item in the list using the TopPlace.fromJson factory
-          final List<TopPlace> places =
-              dataList
-                  .map((item) {
-                    try {
-                      // Ensure item is a map before parsing
-                      if (item is Map<String, dynamic>) {
-                        return TopPlace.fromJson(item);
-                      } else {
-                        print(
-                          "Skipping invalid item in list: $item",
-                        ); // Debugging
-                        return null; // Or throw specific error
-                      }
-                    } catch (e) {
-                      print(
-                        "Error parsing item: $item, Error: $e",
-                      ); // Debugging
-                      return null; // Skip items that fail parsing
-                    }
-                  })
-                  .whereType<
-                    TopPlace
-                  >() // Filter out any nulls from failed parsing
-                  .toList();
-          print(
-            "Successfully parsed ${places.length} top places.",
-          ); // Debugging
-          return places;
+          final List<TopPlace> places = dataList
+              .map((item) {
+                try {
+                  if (item is Map<String, dynamic>) {
+                    return TopPlace.fromJson(item);
+                  } else {
+                    print("Skipping invalid item in list: $item");
+                    return null;
+                  }
+                } catch (e) {
+                  print("Error parsing item: $item, Error: $e");
+                  return null;
+                }
+              })
+              .whereType<TopPlace>()
+              .toList();
+
+          print("Successfully parsed ${places.length} top places.");
+
+          // --- Infer hasMore (Option B) ---
+          final bool hasMore = places.length == limit;
+          print("Calculated hasMore: $hasMore (list size: ${places.length}, limit: $limit)");
+          // --- End Infer hasMore ---
+
+          return TopPlacesPaginatedResponse(places: places, hasMore: hasMore);
+
         } else {
-          // Handle cases where the response is not a list
-          print(
-            "Error: Expected a List but got ${response.data.runtimeType}",
-          ); // Debugging
+          print("Error: Expected a List but got ${response.data.runtimeType}");
           throw Exception('Invalid response format: Expected a List.');
         }
       } else {
-        print(
-          "Error fetching /places/top: Status ${response.statusCode}",
-        ); // Debugging
+         print("Error fetching /api/v1/cities/popular: Status ${response.statusCode}");
         throw DioException(
           requestOptions: response.requestOptions,
           response: response,
           error: "Failed to fetch top places (${response.statusCode})",
-        );
+        );;
       }
     } on DioException catch (e) {
-      print("DioException fetching /places/top: ${e.message}"); // Debugging
-      // Interceptor handles 401, but rethrow for UI handling
+      print("DioException fetching /api/v1/cities/popular: ${e.message}");
       rethrow;
     } catch (e) {
-      print("Unknown error fetching /places/top: $e"); // Debugging
+      print("Unknown error fetching /api/v1/cities/popular: $e");
       throw Exception("An unexpected error occurred fetching top places: $e");
     }
   }
+  
+  // --- NEW: Fetch Favorite Place IDs ---
+  Future<Set<int>> getFavoritePlaceIds() async {
+    try {
+      print("Fetching favorite place IDs: /api/v1/users/me/favorites/ids");
+      final response = await _dio.get('/api/v1/users/me/favorites/ids');
 
-  Future<List<PlacesCategories>> getCategories() async {
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data is List) {
+          // Assuming the API returns a list of integers
+          final List<dynamic> idList = response.data as List<dynamic>;
+          final Set<int> favoriteIds = idList.whereType<int>().toSet();
+          print("Received ${favoriteIds.length} favorite IDs.");
+          return favoriteIds;
+        } else {
+           print("Error: Expected a List of favorite IDs but got ${response.data.runtimeType}");
+          throw Exception('Invalid response format for favorite IDs: Expected a List.');
+        }
+      } else {
+         print("Error fetching favorite IDs: Status ${response.statusCode}");
+         throw DioException(
+           requestOptions: response.requestOptions,
+           response: response,
+           error: "Failed to fetch favorite IDs (${response.statusCode})",
+         );
+      }
+    } on DioException catch (e) {
+      print("DioException fetching favorite IDs: ${e.message}");
+      // Handle specific errors like 401 if needed, though interceptor might handle it
+      rethrow;
+    } catch (e) {
+      print("Unknown error fetching favorite IDs: $e");
+      throw Exception("An unexpected error occurred fetching favorite IDs: $e");
+    }
+  }
+  // --- End Fetch Favorite Place IDs ---
+
+  // --- NEW: Like a Place ---
+  Future<void> likePlace(int placeId) async {
+    try {
+      print("Liking place: POST /api/v1/users/me/favorites/$placeId");
+      final response = await _dio.post('/api/v1/users/me/favorites/$placeId');
+
+      // Check for success status code (e.g., 200, 201, 204 No Content)
+      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
+         print("Successfully liked place $placeId");
+         // No specific data needed from response based on curl example
+         return;
+      } else {
+         print("Error liking place $placeId: Status ${response.statusCode}");
+         throw DioException(
+           requestOptions: response.requestOptions,
+           response: response,
+           error: "Failed to like place $placeId (${response.statusCode})",
+         );
+      }
+    } on DioException catch (e) {
+      print("DioException liking place $placeId: ${e.message}");
+      rethrow; // Let the notifier handle UI feedback
+    } catch (e) {
+      print("Unknown error liking place $placeId: $e");
+      throw Exception("An unexpected error occurred liking place $placeId: $e");
+    }
+  }
+  // --- End Like a Place ---
+
+  // --- NEW: Dislike a Place ---
+  Future<void> dislikePlace(int placeId) async {
+    try {
+      print("Disliking place: DELETE /api/v1/users/me/favorites/$placeId");
+      final response = await _dio.delete('/api/v1/users/me/favorites/$placeId');
+
+      // Check for success status code (e.g., 200 OK, 204 No Content)
+       if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
+         print("Successfully disliked place $placeId");
+         // No specific data needed from response based on curl example
+         return;
+      } else {
+          print("Error disliking place $placeId: Status ${response.statusCode}");
+         throw DioException(
+           requestOptions: response.requestOptions,
+           response: response,
+           error: "Failed to dislike place $placeId (${response.statusCode})",
+         );
+      }
+    } on DioException catch (e) {
+      print("DioException disliking place $placeId: ${e.message}");
+      rethrow; // Let the notifier handle UI feedback
+    } catch (e) {
+      print("Unknown error disliking place $placeId: $e");
+      throw Exception("An unexpected error occurred disliking place $placeId: $e");
+    }
+  }
+  // --- End Dislike a Place ---
+
+
+  Future<List<PlacesCategory>> getCategories() async {
     try {
       print("Fetching /places/categories...");
 
-      final response = await _dio.get('/places/categories');
+      final response = await _dio.get('/api/v1/places/categories');
 
       if (response.statusCode == 200 && response.data != null) {
         if (response.data is List) {
@@ -138,12 +239,12 @@ class PlacesRepository {
 
           final List<dynamic> dataList = response.data as List<dynamic>;
 
-          final List<PlacesCategories> categories =
+          final List<PlacesCategory> categories =
               dataList
                   .map((item) {
                     try {
-                      if (item is Map<String, dynamic>) {
-                        return PlacesCategories.fromJson(item);
+                      if (item is String) {
+                        return PlacesCategory.fromJson(item);
                       } else {
                         print("Skipping invalid item in list: $item");
                         return null;
@@ -153,7 +254,7 @@ class PlacesRepository {
                       return null;
                     }
                   })
-                  .whereType<PlacesCategories>()
+                  .whereType<PlacesCategory >()
                   .toList();
 
           print("Successfully parsed ${categories.length} categories.");

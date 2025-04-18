@@ -27,7 +27,7 @@ class AuthRepository {
     try {
       // !!! Replace with your actual login endpoint and request body !!!
       final response = await _dio.post(
-        '/auth/login', // Example login endpoint
+        '/api/v1/auth/login', // Example login endpoint
         data: FormData.fromMap({ // Backend expects form data based on common FastAPI auth
           'username': email,
           'password': password,
