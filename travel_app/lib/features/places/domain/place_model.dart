@@ -1,6 +1,9 @@
 // TODO: Adjust this based on your actual API response for places
 // Consider using freezed for immutability and boilerplate reduction
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+
 class Place {
   final int id;
   final String name;
@@ -55,3 +58,4 @@ class PlacesResponse {
     );
   }
 }
+

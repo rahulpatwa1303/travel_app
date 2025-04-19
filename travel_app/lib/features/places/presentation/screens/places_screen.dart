@@ -528,43 +528,49 @@ class PlacesScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start, // Align sections to the start
-          children: [
-            // Integrate the built Top Places section widget
-            topPlacesSection,
-            const SizedBox(height: 24), // Add space between sections
-            FloatingHeartLikeButton(
-              initialIsLiked: true,
-              size: 24, // Adjust size as needed
-              onLikedChanged: (bool liked) {
-                // print("Place ${place.id} liked: $liked");
-                // // Update the state using the provider
-                // ref.read(placeLikeStateProvider.notifier).update((state) {
-                //    // Create a mutable copy, update, return immutable
-                //    final newState = Map<int, bool>.from(state);
-                //    newState[place.id] = liked;
-                //    return newState;
-                // });
-                // TODO: Add logic here to sync with your backend API
-              },
-            ),
-            // Integrate the built Categories section widget
-            categorySection,
-
-            // You might have other sections here
-            const SizedBox(height: 24),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 18),
-              child: Text(
-                'Other Sections...',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.refresh(paginatedTopPlacesProvider);
+          ref.refresh(placesCategoriesProvider);
+        },
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start, // Align sections to the start
+            children: [
+              // Integrate the built Top Places section widget
+              topPlacesSection,
+              const SizedBox(height: 24), // Add space between sections
+              FloatingHeartLikeButton(
+                initialIsLiked: true,
+                size: 24, // Adjust size as needed
+                onLikedChanged: (bool liked) {
+                  // print("Place ${place.id} liked: $liked");
+                  // // Update the state using the provider
+                  // ref.read(placeLikeStateProvider.notifier).update((state) {
+                  //    // Create a mutable copy, update, return immutable
+                  //    final newState = Map<int, bool>.from(state);
+                  //    newState[place.id] = liked;
+                  //    return newState;
+                  // });
+                  // TODO: Add logic here to sync with your backend API
+                },
               ),
-            ),
-            const SizedBox(height: 200), // Placeholder space
-          ],
+              // Integrate the built Categories section widget
+              categorySection,
+
+              // You might have other sections here
+              const SizedBox(height: 24),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 18),
+                child: Text(
+                  'Other Sections...',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 200), // Placeholder space
+            ],
+          ),
         ),
       ),
       // Consider removing the FAB if the AppBar refresh is sufficient

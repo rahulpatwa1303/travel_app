@@ -126,6 +126,7 @@ class _CarouselViewWidgetState extends State<CarouselViewWidget> {
               _maxOpacity - (opacityFactor * (_maxOpacity - _minOpacity));
           opacity = opacity.clamp(_minOpacity, _maxOpacity);
 
+          final heroTag = 'place-image-${place.id}';
           // --- OUTER STACK FOR LAYERING CARD AND BUTTON ---
           return Stack(
             children: [
@@ -155,7 +156,7 @@ class _CarouselViewWidgetState extends State<CarouselViewWidget> {
                           print(
                             'Navigating to: $detailPath',
                           ); // Add this print statement
-                          context.push(detailPath);
+                          context.push(detailPath,extra: place);
                         },
                         child: Column(
                           // Card's internal Column
@@ -167,7 +168,10 @@ class _CarouselViewWidgetState extends State<CarouselViewWidget> {
                                 padding: EdgeInsets.all(_cardInnerImagePadding),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(14),
-                                  child: _buildPlaceImage(place),
+                                  child: Hero(
+                                    tag: heroTag,
+                                    child: _buildPlaceImage(place),
+                                  ),
                                 ),
                               ),
                             ),

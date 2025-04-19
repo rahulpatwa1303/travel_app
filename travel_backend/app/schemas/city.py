@@ -39,3 +39,7 @@ class CityDetail(City): # Inherits fields from City list schema (id, name, count
     # Add the nested weather data
     current_weather: Optional[CurrentWeather] = None # <<< Embed weather details
     weather_last_updated: Optional[datetime.datetime] = None
+    budget_scale: Optional[int] = None # Added (using int for schema)
+    budget_summary: Optional[str] = None # Added
+    # latitude: Optional[float] = None
+    # longitude: Optional[float] = None

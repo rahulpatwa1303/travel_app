@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:travel_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:travel_app/features/places/domain/top_place_model.dart';
 import 'package:travel_app/features/places/presentation/screens/city_details_screen.dart';
 
 // Import your screens
@@ -84,13 +85,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           // Extract the placeId from the path parameters
           final placeId = state.pathParameters['placeId'];
+                    // --- Extract extra data ---
+          final extraData = state.extra;
+          TopPlace? initialPlaceData; // Make it nullable
+
+          if (extraData is TopPlace) {
+             // Safely cast if it's the expected type
+             initialPlaceData = extraData;
+          } else if (extraData != null) {
+             // Optional: Log if 'extra' is not the expected type
+             print("Warning: Unexpected data type received in 'extra': ${extraData.runtimeType}");
+          }
+
           if (placeId == null) {
             // Handle error: ID is missing, maybe redirect or show error page
             return Scaffold(
               body: Center(child: Text("Error: Missing Place ID")),
             );
           }
-          return CityDetailsScreen(placeId: placeId);
+          return CityDetailsScreen(placeId: placeId,initialPlaceData: initialPlaceData,);
         },
       ),
       // ShellRoute for authenticated routes with Bottom Nav Bar

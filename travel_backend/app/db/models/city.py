@@ -1,5 +1,5 @@
 # app/db/models/city.py
-from sqlalchemy import Column, Integer, String, DateTime, func, ForeignKey # Ensure ForeignKey is imported
+from sqlalchemy import Column, Float, Integer, SmallInteger, String, DateTime, func, ForeignKey # Ensure ForeignKey is imported
 from sqlalchemy.orm import relationship  # Ensure relationship is imported
 from app.db.base_class import Base
 # Import related models only for type hinting if needed, avoid circular imports at runtime
@@ -53,6 +53,11 @@ class City(Base):
     details_last_updated = Column(DateTime(timezone=True), nullable=True)
     cached_weather = Column(JSONB, nullable=True)
     weather_last_updated = Column(DateTime(timezone=True), nullable=True)
+    budget_scale = Column(SmallInteger, nullable=True) # Added
+    budget_summary = Column(Text, nullable=True) # Added
+    # latitude = Column(Float, nullable=True)
+    # longitude = Column(Float, nullable=True)
+
     # --- END OF NEW COLUMNS ---
 
     # --- Relationships ---
