@@ -9,6 +9,7 @@ from sqlalchemy import func as sql_func
 from app.db import models # Import models namespace
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
+from app.schemas.weather import OpenMeteoForecastResponse
 from app.services import weather_service, wikimedia_service # For pagination defaults if needed later
 from datetime import datetime, timedelta, timezone # Import timezone
 WEATHER_CACHE_MINUTES = 30 # How long to cache weather for (e.g., 30 minutes)
@@ -120,6 +121,7 @@ async def get_popular_cities_optimized( # Renamed
 
     logger.info("Finished preparing popular cities data.")
     return cities_data
+
 async def fetch_and_store_city_image_task(city_id: int, city_name: str, country_name: str):
     """
     Background task to fetch image from Wikimedia and store it in the DB.
@@ -155,6 +157,7 @@ async def fetch_and_store_city_image_task(city_id: int, city_name: str, country_
         finally:
             # Session is automatically closed by 'async with'
             pass
+
 
 
 async def get_city_details(
@@ -241,6 +244,123 @@ async def get_city_details(
              logger.warning(f"Cannot fetch weather for city {city_id}: No places found to get coordinates.")
 
 
+    # --- 5. Handle Other Details (Wikidata, etc. - Placeholder/Future) ---
+    # If implementing Wikidata fetching:
+    # if not city.description or details_stale:
+    #     # Trigger background task to fetch from wikidata_service
+    #     # Update city_data dictionary with results if fetched inline
+
+    return city_data
+
+async def get_city_details_with_open_meteo(
+    db: AsyncSession,
+    city_id: int,
+    background_tasks: BackgroundTasks # Keep for image fetching if needed
+) -> Optional[Dict[str, Any]]:
+    """
+    Gets detailed city information, utilizing cached data and fetching fresh weather.
+    Handles image fetching via background tasks (similar to popular cities).
+    """
+    logger.info(f"Getting details for city_id: {city_id}")
+
+    # --- 1. Fetch City Core Data + Existing Images + Country ---
+    stmt_city = select(models.City).options(
+        selectinload(models.City.country), # Load country
+        selectinload(models.City.images)  # Load existing cached images
+    ).where(models.City.id == city_id)
+
+    result_city = await db.execute(stmt_city)
+    city: Optional[models.City] = result_city.scalars().first()
+
+    if not city:
+        return None # City not found
+
+    # --- 2. Prepare Base Data ---
+    city_data = {
+        "id": city.id,
+        "name": city.name,
+        "country": city.country, # Pydantic will handle schema conversion
+        "description": city.description,
+        "best_time_to_travel": city.best_time_to_travel,
+        "famous_for": city.famous_for,
+        "timezone": city.timezone,
+        "population": city.population,
+        "wikidata_id": city.wikidata_id,
+        "details_last_updated": city.details_last_updated,
+        "images": [img.image_url for img in city.images], # Extract image URLs
+        "current_weather": None, # Placeholder
+        "weather_last_updated": city.weather_last_updated,
+        "lat":city.latitude,
+        "long":city.longitude
+    }
+
+    # --- 3. Handle City Images (Fetch if missing - Background Task) ---
+    if not city_data["images"]:
+        logger.info(f"No cached images for city {city_id}, triggering background fetch.")
+        # Reuse the city image fetching task logic if needed (adapt task function name if necessary)
+        # background_tasks.add_task(fetch_and_store_city_image_task, city.id, city.name, city.country.name)
+        # For simplicity, let's assume image fetch logic is separate or already run by popular endpoint
+
+    # --- 4. Handle Weather Data (Check Cache, Fetch if Stale) ---
+    needs_weather_fetch = True
+    parsed_weather_data: Optional[OpenMeteoForecastResponse] = None # To hold parsed data
+
+    if city.cached_weather and city.weather_last_updated:
+        cache_age = datetime.now(timezone.utc) - city.weather_last_updated
+        if cache_age < timedelta(minutes=WEATHER_CACHE_MINUTES):
+            logger.info(f"Using cached Open-Meteo weather for city {city_id}")
+            try:
+                # --- Parse cached JSON using the Pydantic schema ---
+                parsed_weather_data = OpenMeteoForecastResponse.parse_obj(city.cached_weather)
+                city_data["weather_forecast"] = parsed_weather_data # Assign parsed object
+                needs_weather_fetch = False
+            except Exception as parse_err:
+                 logger.warning(f"Failed to parse cached weather data for city {city_id}: {parse_err}. Fetching fresh data.")
+                 needs_weather_fetch = True # Force fetch if cache is invalid
+        else:
+             logger.info(f"Open-Meteo cache stale for city {city_id} (age: {cache_age}). Fetching fresh data.")
+
+
+    if needs_weather_fetch:
+        logger.info(f"Fetching fresh weather for city {city_id}...")
+        # We need lat/lon - Assuming City model doesn't have them, get from a place? Or add to City?
+        # HACK: Get lat/lon from the first place in the city (inefficient!)
+        # Better: Add representative lat/lon columns to the cities table!
+        first_place_stmt = select(models.Place.latitude, models.Place.longitude).where(models.Place.city_id == city_id).order_by(models.Place.id).limit(1)
+        place_loc_result = await db.execute(first_place_stmt)
+        place_loc = place_loc_result.first()
+        if place_loc: lat, lon = place_loc.latitude, place_loc.longitude
+        # --- End Get Lat/Lon ---
+
+        if lat is not None and lon is not None:
+            # --- CALL THE NEW OPEN-METEO FUNCTION ---
+            weather_json = await weather_service.get_open_meteo_forecast_data(lat=lat, lon=lon) # Raw JSON dict
+            if weather_json:
+                logger.info(f"Successfully fetched Open-Meteo weather for city {city_id}.")
+                try:
+                    # --- Parse response JSON using Pydantic schema ---
+                    parsed_weather_data = OpenMeteoForecastResponse.parse_obj(weather_json)
+                    city_data["weather_forecast"] = parsed_weather_data # Assign parsed object
+                    now_utc = datetime.now(timezone.utc)
+                    city_data["weather_last_updated"] = now_utc
+
+                    # --- Update cache in DB with RAW JSON ---
+                    city.cached_weather = weather_json # Store the raw JSON
+                    city.weather_last_updated = now_utc
+                    db.add(city)
+                    logger.info(f"Cached raw Open-Meteo weather in DB for city {city_id}.")
+                except Exception as parse_err:
+                     logger.error(f"Failed to parse fresh Open-Meteo response for city {city_id}: {parse_err}", exc_info=True)
+                     city_data["weather_last_updated"] = None
+                     city_data["weather_forecast"] = None
+            else:
+                logger.warning(f"Failed to fetch Open-Meteo weather for city {city_id}.")
+                city_data["weather_last_updated"] = None
+                city_data["weather_forecast"] = None
+        else:
+             logger.warning(f"Cannot fetch weather for city {city_id}: No coordinates available.")
+             city_data["weather_last_updated"] = None
+             city_data["weather_forecast"] = None
     # --- 5. Handle Other Details (Wikidata, etc. - Placeholder/Future) ---
     # If implementing Wikidata fetching:
     # if not city.description or details_stale:

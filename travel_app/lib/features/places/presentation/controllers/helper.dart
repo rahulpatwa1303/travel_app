@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+import 'package:travel_app/features/places/domain/city_detail_model.dart';
 // You can put this in the same file as the details screen or a separate helper file
 class TravelPeriod {
   final String when; // e.g., "Spring (Mar-May)" or "October to April"
@@ -75,4 +77,65 @@ List<TravelPeriod> parseBestTimeToTravel(String? rawText) {
 
 
   return periods;
+}
+
+class HourlyWeatherFormatted {
+  final String time; // e.g., 2:00 PM
+  final String date; // e.g., April 21, 2025
+  final double temperature;
+
+  HourlyWeatherFormatted({
+    required this.time,
+    required this.date,
+    required this.temperature,
+  });
+}
+
+extension HourlyDataFormatter on HourlyData {
+  List<HourlyWeatherFormatted> get formattedHourlyWeather {
+    final times = time;
+    final temps = temperature2m;
+
+    if (times == null || temps == null || times.length != temps.length) {
+      return [];
+    }
+
+    return List.generate(times.length, (index) {
+      final dateTime = DateTime.parse(times[index]);
+      final formattedTime = DateFormat.jm().format(dateTime); // e.g., 2:00 PM
+      final formattedDate = DateFormat.yMMMMd().format(dateTime); // e.g., April 21, 2025
+
+      return HourlyWeatherFormatted(
+        time: formattedTime,
+        date: formattedDate,
+        temperature: temps[index],
+      );
+    });
+  }
+}
+
+
+Map<String, List<double>> groupTempsByDay(List<String> times, List<double> temps) {
+  final Map<String, List<double>> dailyTemps = {};
+
+  for (int i = 0; i < times.length; i++) {
+    final time = DateTime.parse(times[i]);
+    final dayKey = '${time.year}-${time.month.toString().padLeft(2, '0')}-${time.day.toString().padLeft(2, '0')}';
+    dailyTemps.putIfAbsent(dayKey, () => []).add(temps[i]);
+  }
+
+  return dailyTemps;
+}
+
+Map<String, TemperatureRange> calculateDailyTempRanges(List<String> times, List<double> temps) {
+  final grouped = groupTempsByDay(times, temps);
+  final Map<String, TemperatureRange> ranges = {};
+
+  grouped.forEach((day, tempsForDay) {
+    final min = tempsForDay.reduce((a, b) => a < b ? a : b);
+    final max = tempsForDay.reduce((a, b) => a > b ? a : b);
+    ranges[day] = TemperatureRange(min, max);
+  });
+
+  return ranges;
 }

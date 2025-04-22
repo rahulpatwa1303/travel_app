@@ -1,31 +1,20 @@
 // lib/features/places/domain/city_detail_model.dart
 
 import 'package:freezed_annotation/freezed_annotation.dart';
-// Import the existing Country model (adjust path if needed)
+import 'package:travel_app/features/places/domain/country_model.dart';
+import 'package:travel_app/features/places/presentation/controllers/helper.dart';
 
 part 'city_detail_model.freezed.dart';
 part 'city_detail_model.g.dart';
 
-@freezed
-class Country with _$Country {
-  const factory Country({
-    required int id,
-    required String name,
-  }) = _Country;
-
-  factory Country.fromJson(Map<String, dynamic> json) =>
-      _$CountryFromJson(json);
-}
-
 // --- Main City Detail Model ---
 @freezed
 class CityDetail with _$CityDetail {
-  @JsonSerializable(explicitToJson: true)
   const factory CityDetail({
     required int id,
     required String name,
     required Country country,
-    @Default([]) List<dynamic>? images,
+    @JsonKey(name: 'images') @Default([]) List<String> images,
     String? description,
     @JsonKey(name: 'best_time_to_travel') String? bestTimeToTravel,
     @JsonKey(name: 'famous_for') String? famousFor,
@@ -37,54 +26,41 @@ class CityDetail with _$CityDetail {
     @JsonKey(name: 'weather_last_updated') String? weatherLastUpdated,
     @JsonKey(name: 'budget_scale') dynamic budgetScale,
     @JsonKey(name: 'budget_summary') String? budgetSummary,
+    @JsonKey(name: 'weather_forecast') WeatherForecast? weatherForecast,
   }) = _CityDetail;
-
-  // --- ADD THIS PRIVATE CONSTRUCTOR ---
-  const CityDetail._();
-  // --- END ADDED CONSTRUCTOR ---
 
   factory CityDetail.fromJson(Map<String, dynamic> json) =>
       _$CityDetailFromJson(json);
 
-  // Helper getter for primary image URL
-  String? get primaryImageUrl {
-     if (images != null && images!.isNotEmpty) {
-       var firstImage = images!.first;
-       if (firstImage is Map<String, dynamic> && firstImage.containsKey('url')) {
-         return firstImage['url'] as String?;
-       } else if (firstImage is String) {
-         return firstImage;
-       }
-     }
-     return null;
-   }
+  const CityDetail._();
 
-   // Helper to determine if default image should be used
-   bool get usesDefaultImage => primaryImageUrl == null || primaryImageUrl!.isEmpty;
-
+  String? get primaryImageUrl => images.isNotEmpty ? images.first : null;
+  bool get usesDefaultImage =>
+      primaryImageUrl == null || primaryImageUrl!.isEmpty;
 }
+
 // --- Nested Current Weather Model ---
 @freezed
 class CurrentWeather with _$CurrentWeather {
-   @JsonSerializable(explicitToJson: true)
-   const factory CurrentWeather({
+  const factory CurrentWeather({
     @Default([]) List<WeatherInfo>? weather,
     WeatherMain? main,
     int? visibility,
     WeatherWind? wind,
-    int? dt, // Timestamp
-    int? timezone, // Timezone offset in seconds?
-    String? name, // Name from weather source
+    int? dt,
+    int? timezone,
+    String? name,
   }) = _CurrentWeather;
 
   factory CurrentWeather.fromJson(Map<String, dynamic> json) =>
       _$CurrentWeatherFromJson(json);
 }
 
-// --- Nested Weather Info Model ---
+// --- WeatherInfo ---
 @freezed
 class WeatherInfo with _$WeatherInfo {
   const factory WeatherInfo({
+    int? id,
     String? main,
     String? description,
     String? icon,
@@ -94,15 +70,14 @@ class WeatherInfo with _$WeatherInfo {
       _$WeatherInfoFromJson(json);
 }
 
-// --- Nested Weather Main Model ---
+// --- WeatherMain ---
 @freezed
 class WeatherMain with _$WeatherMain {
   const factory WeatherMain({
     double? temp,
-    // Match JSON key if different (example: feels_like)
-    @JsonKey(name: 'feelsLike') double? feelsLike, // Adjusted key based on provided JSON
-    @JsonKey(name: 'tempMin') double? tempMin,     // Adjusted key
-    @JsonKey(name: 'tempMax') double? tempMax,     // Adjusted key
+    double? feels_like,
+    double? temp_min,
+    double? temp_max,
     int? pressure,
     int? humidity,
   }) = _WeatherMain;
@@ -111,14 +86,123 @@ class WeatherMain with _$WeatherMain {
       _$WeatherMainFromJson(json);
 }
 
-// --- Nested Weather Wind Model ---
+// --- WeatherWind ---
 @freezed
 class WeatherWind with _$WeatherWind {
-  const factory WeatherWind({
-    double? speed,
-    int? deg,
-  }) = _WeatherWind;
+  const factory WeatherWind({double? speed, int? deg}) = _WeatherWind;
 
   factory WeatherWind.fromJson(Map<String, dynamic> json) =>
       _$WeatherWindFromJson(json);
+}
+
+// --- Weather Forecast Models ---
+@freezed
+class WeatherForecast with _$WeatherForecast {
+  const factory WeatherForecast({
+    HourlyUnits? hourlyUnits,
+    HourlyData? hourly,
+    DailyUnits? dailyUnits,
+    DailyData? daily,
+    double? latitude,
+    double? longitude,
+    @JsonKey(name: 'generationtimeMs')
+    double? generationtimeMs, // Keep JsonKey for case difference
+    int? utcOffsetSeconds,
+    String? timezone, // IANA Timezone Name (e.g., "America/Costa_Rica")
+    String? timezoneAbbreviation, // e.g., "GMT-6"
+    double? elevation,
+  }) = _WeatherForecast;
+
+  factory WeatherForecast.fromJson(Map<String, dynamic> json) =>
+      _$WeatherForecastFromJson(json);
+}
+
+@freezed
+class HourlyUnits with _$HourlyUnits {
+  const factory HourlyUnits({String? temperature, String? time}) = _HourlyUnits;
+
+  factory HourlyUnits.fromJson(Map<String, dynamic> json) =>
+      _$HourlyUnitsFromJson(json);
+}
+
+@freezed
+class HourlyData with _$HourlyData {
+  const factory HourlyData({
+    List<String>? time,
+    @JsonKey(name: 'temperature2m') List<double>? temperature2m,
+    List<int>? isDay,
+    List<double>? sunshineDuration,
+    List<int>? weathercode,
+    @JsonKey(name: 'precipitationProbability')
+    List<int>? precipitationProbability,
+  }) = _HourlyData;
+
+  factory HourlyData.fromJson(Map<String, dynamic> json) =>
+      _$HourlyDataFromJson(json);
+}
+
+@freezed
+class DailyUnits with _$DailyUnits {
+  const factory DailyUnits({
+    String? temperature_max,
+    String? temperature_min,
+    String? sunrise,
+    String? sunset,
+    String? time,
+  }) = _DailyUnits;
+
+  factory DailyUnits.fromJson(Map<String, dynamic> json) =>
+      _$DailyUnitsFromJson(json);
+}
+
+@freezed
+class DailyData with _$DailyData {
+  const factory DailyData({
+    List<String>? time,
+    List<double>? temperature_max,
+    List<double>? temperature_min,
+    List<String>? sunrise,
+    List<String>? sunset,
+  }) = _DailyData;
+
+  factory DailyData.fromJson(Map<String, dynamic> json) =>
+      _$DailyDataFromJson(json);
+}
+
+class TemperatureRange {
+  final double minTemp;
+  final double maxTemp;
+
+  TemperatureRange(this.minTemp, this.maxTemp);
+}
+
+extension DailyDataExtensions on DailyData {
+  double getMinTempForDay(int index) => temperature_min?[index] ?? 0;
+  double getMaxTempForDay(int index) => temperature_max?[index] ?? 0;
+}
+
+DailyData createDailyDataWithTemps({
+  required List<String> dailyTimes,
+  List<String>? sunrise,
+  List<String>? sunset,
+  required List<String> hourlyTimes,
+  required List<double> hourlyTemps,
+}) {
+  final ranges = calculateDailyTempRanges(hourlyTimes, hourlyTemps);
+  final minTemps = <double>[];
+  final maxTemps = <double>[];
+
+  for (final date in dailyTimes) {
+    final range = ranges[date];
+    minTemps.add(range?.minTemp ?? 0);
+    maxTemps.add(range?.maxTemp ?? 0);
+  }
+
+  return DailyData(
+    time: dailyTimes,
+    sunrise: sunrise,
+    sunset: sunset,
+    temperature_min: minTemps,
+    temperature_max: maxTemps,
+  );
 }

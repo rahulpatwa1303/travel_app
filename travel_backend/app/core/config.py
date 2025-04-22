@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     DEFAULT_PAGE_SIZE: int = int(os.getenv("DEFAULT_PAGE_SIZE", 20))
     MAX_PAGE_SIZE: int = int(os.getenv("MAX_PAGE_SIZE", 100))
     OWM_API_KEY: str = os.getenv("OWM_API_KEY","8e5718c568f5a5c51c81c827f7bd17bf")
+    GEONAMES_USERNAME: Optional[str] = os.getenv("GEONAMES_USERNAME")
     # Example of how to add CORS origins if needed later
     # BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
     # @validator("BACKEND_CORS_ORIGINS", pre=True)

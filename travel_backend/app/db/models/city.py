@@ -55,8 +55,8 @@ class City(Base):
     weather_last_updated = Column(DateTime(timezone=True), nullable=True)
     budget_scale = Column(SmallInteger, nullable=True) # Added
     budget_summary = Column(Text, nullable=True) # Added
-    # latitude = Column(Float, nullable=True)
-    # longitude = Column(Float, nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
 
     # --- END OF NEW COLUMNS ---
 

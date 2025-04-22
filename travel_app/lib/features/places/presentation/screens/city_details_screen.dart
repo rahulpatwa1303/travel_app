@@ -1,10 +1,15 @@
 // lib/features/places/presentation/screens/city_details_screen.dart
 
+import 'dart:convert';
 import 'dart:math'; // For pagination calculation
 
 import 'package:collection/collection.dart'; // For deep list equality check
 import 'package:flutter/material.dart';
+import 'package:flutter_echarts/flutter_echarts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:travel_app/core/constants/weather_icons.dart';
+import 'package:travel_app/features/places/data/repositories/cities_time.dart';
 // Import your models
 import 'package:travel_app/features/places/domain/city_detail_model.dart';
 import 'package:travel_app/features/places/domain/place_by_city_model.dart'; // Use PlaceByCity
@@ -12,6 +17,7 @@ import 'package:travel_app/features/places/domain/top_place_model.dart'; // For 
 // Import helpers and providers
 import 'package:travel_app/features/places/presentation/controllers/helper.dart';
 import 'package:travel_app/features/places/presentation/providers/places_provider.dart';
+import 'package:travel_app/widget/sun_position_arc.dart';
 
 // --- Convert to ConsumerStatefulWidget ---
 class CityDetailsScreen extends ConsumerStatefulWidget {
@@ -30,9 +36,10 @@ class CityDetailsScreen extends ConsumerStatefulWidget {
 
 // --- State Class ---
 class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   // Added TickerProviderStateMixin for TabController
-
+  @override
+  bool get wantKeepAlive => true; // KEEP ALIVE
   // State variables for Tabs and Pagination
 
   TabController? _tabController;
@@ -242,11 +249,26 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
             Hero(
               tag: heroTag,
               child: Container(
-                // Image Container
                 height: 350,
                 width: double.infinity,
-                decoration: BoxDecoration(/* ... Image Decoration ... */),
-                child: Container(/* ... Gradient Overlay ... */),
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey[300], // Fallback
+                  image:
+                      useDefaultImage
+                          ? const DecorationImage(
+                            image: AssetImage('assets/city.png'),
+                            fit: BoxFit.cover,
+                          )
+                          : (displayImageUrl != null
+                              ? DecorationImage(
+                                image: NetworkImage(
+                                  displayImageUrl!,
+                                ), // Use updated URL
+                                fit: BoxFit.cover,
+                              )
+                              : null),
+                ),
+                child: Container(/* Gradient Overlay */),
               ),
             ),
             Padding(
@@ -270,13 +292,34 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
 
                   // --- City Details Section ---
                   cityDetailsAsync.when(
-                    data:
-                        (details) => _buildCityDetailsContent(
-                          context,
-                          details,
-                          parsedTravelPeriods,
-                          rawBestTimeText,
-                        ),
+                    data: (details) {
+                      return Column(
+                        children: [
+                          _buildCityDetailsContent(
+                            context,
+                            details,
+                            parsedTravelPeriods,
+                            rawBestTimeText,
+                          ),
+                          Card(
+                            elevation: 1, // Optional elevation
+                            margin:
+                                EdgeInsets
+                                    .zero, // Remove Card's default margin if needed
+                            clipBehavior: Clip.antiAlias,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: _buildCitySunDetailsContent(
+                              context,
+                              details,
+                              parsedTravelPeriods,
+                              rawBestTimeText,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                     loading:
                         () => const Center(
                           child: Padding(
@@ -311,6 +354,7 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
   }
 
   // --- Helper for City Details Content ---
+  // --- UPDATED Helper for City Details Content ---
   Widget _buildCityDetailsContent(
     BuildContext context,
     CityDetail details,
@@ -322,9 +366,176 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
       parsedTravelPeriods,
       rawBestTimeText,
     );
+    // Remove 'formattedData' if not used elsewhere
+    // final formattedData = details.weatherForecast?.hourly?.formattedHourlyWeather;
+    final hourlyRaw = details.weatherForecast?.hourly;
+
+    // --- Data Extraction for Chart ---
+    List<Map<String, dynamic>>? chartData;
+    if (hourlyRaw?.time != null &&
+        hourlyRaw?.temperature2m != null &&
+        hourlyRaw?.weathercode != null && // Check weathercode
+        hourlyRaw?.isDay != null && // Check isDay
+        hourlyRaw?.time!.length == hourlyRaw?.temperature2m!.length &&
+        hourlyRaw?.time!.length == hourlyRaw?.weathercode!.length &&
+        hourlyRaw?.time!.length == hourlyRaw?.isDay!.length) {
+      chartData = [];
+      for (int i = 0; i < hourlyRaw!.time!.length; i++) {
+        String timeStr = hourlyRaw.time![i];
+        String displayTime = timeStr.split('T').last; // "HH:MM"
+        int weatherCode = hourlyRaw.weathercode![i];
+        int isDay = hourlyRaw.isDay![i];
+
+        // --- Look up Description and Icon ---
+        final codeInfo = wmoWeatherCodes[weatherCode.toString()];
+        String description = "Unknown";
+        String iconUrl =
+            "http://openweathermap.org/img/wn/01d@2x.png"; // Sensible default
+
+        if (codeInfo != null) {
+          final dayNightKey = isDay == 1 ? 'day' : 'night';
+          if (codeInfo[dayNightKey] != null && codeInfo[dayNightKey] is Map) {
+            description =
+                codeInfo[dayNightKey]['description'] as String? ?? description;
+            iconUrl = codeInfo[dayNightKey]['image'] as String? ?? iconUrl;
+          }
+        }
+        // --- End Lookup ---
+
+        chartData.add({
+          'time': displayTime,
+          'temperature': hourlyRaw.temperature2m![i],
+          'weathercode': weatherCode,
+          'description': description, // Include description
+          'iconUrl': iconUrl, // Include correct icon URL
+        });
+      }
+    }
+    // --- End Data Extraction ---
+
+    // Prepare data for ECharts only if chartData is valid
+    List<String> xAxisData = [];
+    List<Map<String, dynamic>> seriesData = []; // Use the enriched data
+    double yAxisMax = 30; // Default max
+    double yAxisMin = 0; // Default min
+
+    if (chartData != null && chartData.isNotEmpty) {
+      xAxisData = chartData.map((e) => e['time'] as String).toList();
+      // Create the series data expected by the formatter
+      seriesData =
+          chartData
+              .map(
+                (e) => {
+                  'value': e['temperature'], // Y-value for the line
+                  'time':
+                      e['time'], // Needed by formatter? No longer needed in label
+                  'description': e['description'], // Needed by tooltip
+                  'iconUrl':
+                      e['iconUrl'], // Needed by rich text label formatter
+                },
+              )
+              .toList();
+
+      // Calculate Y-Axis Max/Min from temperature data
+      try {
+        // Add try-catch for safety if list might be empty after filtering
+        double maxTemp =
+            chartData
+                .map((e) => e['temperature'] as num)
+                .reduce(max)
+                .toDouble();
+        double minTemp =
+            chartData
+                .map((e) => e['temperature'] as num)
+                .reduce(min)
+                .toDouble();
+        yAxisMax = (maxTemp + 6).ceilToDouble(); // Padding above
+        yAxisMin = (minTemp - 2).floorToDouble(); // Padding below
+      } catch (e) {
+        print("Error calculating min/max temp: $e");
+        // Keep default yAxisMin/Max
+      }
+    }
+
+    // --- FINAL ECharts Option Map ---
+    // Build only if data is available
+    final String? echartsOption =
+        (chartData != null && chartData.isNotEmpty)
+            ? '''
+    {
+      tooltip: {
+        trigger: 'axis',
+        formatter: function (params) {
+            var param = params[0];
+            var data = param.data;
+            if (!data) return '';
+            var temp = data.value;
+            var tempStr = (typeof temp === 'number') ? temp.toFixed(1) + '°C' : '--';
+            // Tooltip: Time (axis label) + Description + Temp
+            return param.axisValueLabel + '<br/>'
+                   + data.description + '<br/>'
+                   + tempStr;
+        }
+      },
+      grid: { left: '8%', right: '8%', bottom: '15%', top: '28%', containLabel: false }, // Adjusted margins
+      xAxis: {
+        type: 'category', boundaryGap: false, show: true, position: 'top',
+        data: ${jsonEncode(xAxisData)},
+        axisLabel: { interval: 0, rotate: 0, hideOverlap: true, fontSize: 10,fontWeight:800, color: '#666' },
+        axisTick: { length: 3, alignWithLabel: true },
+        axisLine: { show: true, lineStyle: { color: '#eee' } }
+      },
+      yAxis: { type: 'value', show: false, scale: true, max: $yAxisMax, min: $yAxisMin },
+      dataZoom: [
+        { type: 'inside', xAxisIndex: 0, filterMode: 'filter', zoomLock: true, start: 0, end: 30 },
+        { type: 'slider', show: false, xAxisIndex: 0 }
+      ],
+      series: [{
+        name: 'Temperature', type: 'line', smooth: true, symbol: 'circle', symbolSize: 4, sampling: 'lttb',
+        data: ${jsonEncode(seriesData)}, // <-- PASS CORRECT DATA HERE
+        lineStyle: { width: 2 },
+        areaStyle: { opacity: 0.1 },
+        label: {
+            show: true, position: 'top', distance: 8,
+            formatter: function(params) {
+               var data = params.data;
+               var temp = data.value;
+               var tempStr = (typeof temp === 'number') ? temp.toFixed(0) + '°' : '--';
+               // Return rich text array [image, temp]
+               return [ '{img|}', '{tempStyle|' + tempStr + '}' ].join('\\n');
+            },
+            rich: {
+               img: {
+                  // Explicitly check params.data exists before accessing iconUrl
+                    backgroundColor: {
+                      image: function(params) {
+                         // Verify params and data structure again carefully
+                         console.log("Rich Img Params:", params); // DEBUG
+                         if (params && params.data && params.data.iconUrl && params.data.iconUrl.length > 0) {
+                             console.log("Using Icon URL:", params.data.iconUrl); // DEBUG
+                             return params.data.iconUrl;
+                         }
+                         console.warn("Icon URL missing or invalid, using default."); // DEBUG
+                         return 'http://openweathermap.org/img/wn/01d@2x.png'; // Default placeholder
+                       }
+                  },
+                  height: 16, width: 16, align: 'center',
+                  padding: [0, 0, 1, 0] // Padding below image
+               },
+               tempStyle: { color: '#333', fontSize: 9, fontWeight: 'bold', align: 'center', lineHeight: 11 }
+            }
+        }
+      }]
+    }
+    '''
+            : null; // Set option to null if no data
+    // --- End ECharts Option Map ---
+
+    // --- Main return Column ---
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Display Description, Best Time, Famous For (as before)
         if (details.description != null && details.description!.isNotEmpty) ...[
           Text(
             "Description:",
@@ -347,26 +558,206 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
           Text(details.famousFor!),
           const SizedBox(height: 16),
         ],
-        if (details.currentWeather?.main?.temp != null) ...[
-          // Display weather if available
+        const SizedBox(height: 24), // Space before chart
+        // --- Conditionally display Chart ---
+        if (echartsOption != null) ...[
+          // Only build if option was generated
           Text(
-            "Current Weather:",
+            "Hourly Forecast:",
             style: Theme.of(
               context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
-          Text("${details.currentWeather!.main!.temp!.toStringAsFixed(1)} °C"),
-          // Optionally display weather description
-          if (details.currentWeather!.weather != null &&
-              details.currentWeather!.weather!.isNotEmpty)
-            Text(
-              details.currentWeather!.weather!.first.description
-                      ?.capitalizeFirst() ??
-                  '',
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 230,
+            width: double.infinity,
+            child: Card(
+              // Wrap Echarts in Card
+              elevation: 1, // Optional elevation
+              margin: EdgeInsets.zero, // Remove Card's default margin if needed
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Echarts(
+                key: ValueKey(
+                  'weather-chart-${widget.placeId}-${details.weatherLastUpdated}',
+                ),
+                option: echartsOption, // Pass the generated option string
+                captureHorizontalGestures: true,
+                captureAllGestures: true,
+                // Removed reloadAfterInit and onLoad - not needed with ValueKey update
+              ),
             ),
-          const SizedBox(height: 16),
+          ),
+          const SizedBox(height: 16), // Spacing after chart
+        ] else ...[
+          // Optionally show a message if chart data is missing
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Text(
+              "Hourly forecast data not available.",
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
         ],
+        // --- End Chart ---
       ],
+    );
+  }
+
+  Widget _buildCitySunDetailsContent(
+    BuildContext context,
+    CityDetail details,
+    List<TravelPeriod> parsedTravelPeriods,
+    String? rawBestTimeText,
+  ) {
+    Widget bestTimeSection = buildBestTimeSection(
+      context,
+      parsedTravelPeriods,
+      rawBestTimeText,
+    );
+
+    // --- Extract Sunrise/Sunset Times (Example) ---
+    // IMPORTANT: Your DailyData time strings might need parsing!
+    // Assuming daily.time[0] is today, daily.sunrise[0] and daily.sunset[0] are ISO strings
+    DateTime? sunriseTime;
+    DateTime? sunsetTime;
+    final dailyData = details.weatherForecast?.daily;
+    if (dailyData?.sunrise != null && dailyData!.sunrise!.isNotEmpty) {
+      sunriseTime = DateTime.tryParse(dailyData.sunrise!.first);
+    }
+    if (dailyData?.sunset != null && dailyData!.sunset!.isNotEmpty) {
+      sunsetTime = DateTime.tryParse(dailyData.sunset!.first);
+    }
+    // --- End Time Extraction ---
+
+    // Get current time (can be passed in or fetched)
+    final DateTime now = DateTime.now(); // Use actual current time
+
+    final lat = details.weatherForecast?.latitude;
+    final lng = details.weatherForecast?.longitude;
+
+    if (lat == null || lng == null) {
+      return Text('Location not available');
+    }
+    final DateFormat localTimeFormatter = DateFormat.jm();
+    final DateFormat dateTimeParser = DateFormat(
+      "yyyy-MM-dd HH:mm",
+    ); // EXAMPLE PARSER - ADJUST TO YOUR API's RETURN FORMAT
+    return FutureBuilder<String>(
+      future: getCurrentTimeFromLatLng(lat, lng),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CircularProgressIndicator();
+        } else if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}');
+        } else if (!snapshot.hasData) {
+          return const Text('No data received');
+        }
+
+        final String localTimeString = snapshot.data!;
+        DateTime? localTimeDateTime; // Keep it nullable initially
+        String displayLocalTime = "N/A";
+
+        try {
+          // *** IMPORTANT: ADJUST PARSING FORMAT HERE ***
+          // Example 1: If API returns ISO 8601 string (e.g., "2023-10-27T15:30:00Z" or "2023-10-27T10:30:00-05:00")
+          localTimeDateTime = DateTime.parse(localTimeString).toLocal();
+
+          // Example 2: If API returns "YYYY-MM-DD HH:MM" (adjust format string)
+          // localTimeDateTime = dateTimeParser.parse(localTimeString, true).toLocal();
+
+          // If parsing successful, format for display
+          displayLocalTime = localTimeFormatter.format(localTimeDateTime);
+        } catch (e) {
+          print(
+            "Error parsing fetched local time string '$localTimeString': $e",
+          );
+          displayLocalTime = localTimeString; // Show raw string as fallback
+        }
+        // --- End Time Processing ---
+
+        String sunMessage = "";
+        if (localTimeDateTime != null &&
+            sunriseTime != null &&
+            sunsetTime != null) {
+          final Duration timeUntilSunrise = sunriseTime.difference(
+            localTimeDateTime,
+          );
+          final Duration timeUntilSunset = sunsetTime.difference(
+            localTimeDateTime,
+          );
+
+          // Check if sunrise is upcoming (within next 90 mins)
+          if (timeUntilSunrise > Duration.zero &&
+              timeUntilSunrise <= const Duration(minutes: 90)) {
+            sunMessage = "Sunrise soon! Don't miss it.";
+          }
+          // Check if sunset is upcoming (within next 90 mins)
+          else if (timeUntilSunset > Duration.zero &&
+              timeUntilSunset <= const Duration(minutes: 90)) {
+            sunMessage = "Sunset approaching! Find a good spot.";
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ), // Space below time text
+              child: Text(
+                "Current time is $displayLocalTime",
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (sunMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(
+                  right: 12,left: 12,
+                  bottom: 10,
+                ), // Space below message
+                child: Text(
+                  sunMessage,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).primaryColor,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            // --- Add Sun Arc Widget ---
+            if (sunriseTime != null && sunsetTime != null)
+              Center(
+                // Center the Arc widget horizontally
+                child: SunPositionArc(
+                  sunrise: sunriseTime,
+                  sunset: sunsetTime,
+                  currentTime: localTimeDateTime,
+                  size: 180, // Adjust size
+                  arcColor: Colors.orange.shade300,
+                  sunColor: Colors.yellow.shade700,
+                  timeColor: Colors.black54,
+                  strokeWidth: 2,
+                  sunRadius: 8,
+                ),
+              )
+            else
+              const Text(
+                "Sunrise/sunset data unavailable.",
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+
+            // --- End Sun Arc ---
+            const SizedBox(height: 24), // Space after sun arc
+          ],
+        );
+      },
     );
   }
 
@@ -671,25 +1062,37 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(
-                      // Image takes most space
                       child: Container(
                         color: Colors.grey[200],
                         child:
-                            place
-                                    .usesDefaultImage // Use helper getter
+                            place.usesDefaultImage
                                 ? Image.asset(
                                   'assets/city.png',
                                   fit: BoxFit.cover,
                                 )
-                                : (place.primaryImageUrl !=
-                                        null // Use helper getter
-                                    ? Image.network(
-                                      place.primaryImageUrl!,
-                                      fit: BoxFit.cover /* loading/error */,
-                                    )
-                                    : const Icon(Icons.image_not_supported)),
+                                : (place.primaryImageUrl != null &&
+                                    place.primaryImageUrl!.isNotEmpty)
+                                ? Image.network(
+                                  place.primaryImageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(Icons.broken_image);
+                                  },
+                                  loadingBuilder: (
+                                    context,
+                                    child,
+                                    loadingProgress,
+                                  ) {
+                                    if (loadingProgress == null) return child;
+                                    return const Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  },
+                                )
+                                : const Icon(Icons.image_not_supported),
                       ),
                     ),
+
                     Padding(
                       // Padding for name
                       padding: const EdgeInsets.all(6.0),

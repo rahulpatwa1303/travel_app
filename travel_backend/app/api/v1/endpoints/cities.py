@@ -76,7 +76,11 @@ async def read_city_detail(
     - Cached description, travel info (if available)
     - Live or recently cached weather data
     """
-    city_details = await crud.crud_city.get_city_details(
+    # city_details = await crud.crud_city.get_city_details(
+    #     db=db, city_id=city_id, background_tasks=background_tasks
+    # )
+
+    city_details = await crud.crud_city.get_city_details_with_open_meteo(
         db=db, city_id=city_id, background_tasks=background_tasks
     )
 

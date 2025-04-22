@@ -41,6 +41,9 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   skeletonizer: ^1.4.3
   cached_network_image: ^3.4.1
+  json_serializable: ^6.9.5 # Use latest version
+  flutter_echarts: ^2.5.0
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

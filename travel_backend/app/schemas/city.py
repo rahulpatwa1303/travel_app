@@ -2,7 +2,7 @@ import datetime
 from pydantic import BaseModel, HttpUrl
 from typing import List, Optional
 
-from app.schemas.weather import CurrentWeather
+from app.schemas.weather import CurrentWeather, OpenMeteoForecastResponse
 from .country import Country # Import the Country schema
 
 # Shared base properties
@@ -38,8 +38,9 @@ class CityDetail(City): # Inherits fields from City list schema (id, name, count
     details_last_updated: Optional[datetime.datetime] = None
     # Add the nested weather data
     current_weather: Optional[CurrentWeather] = None # <<< Embed weather details
-    weather_last_updated: Optional[datetime.datetime] = None
     budget_scale: Optional[int] = None # Added (using int for schema)
     budget_summary: Optional[str] = None # Added
     # latitude: Optional[float] = None
+    weather_forecast: Optional[OpenMeteoForecastResponse] = None # <<< Use new schema
+    weather_last_updated: Optional[datetime.datetime] = None
     # longitude: Optional[float] = None
