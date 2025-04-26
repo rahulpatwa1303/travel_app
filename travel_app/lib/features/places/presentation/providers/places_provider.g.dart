@@ -308,5 +308,128 @@ class _PlacesInCityProviderElement
   int get cityId => (origin as PlacesInCityProvider).cityId;
 }
 
+String _$currentLocalTimeHash() => r'ce2ef01cc690ad5182b8c50cc06335da1c85c401';
+
+/// See also [currentLocalTime].
+@ProviderFor(currentLocalTime)
+const currentLocalTimeProvider = CurrentLocalTimeFamily();
+
+/// See also [currentLocalTime].
+class CurrentLocalTimeFamily extends Family<AsyncValue<CachedLocalTime>> {
+  /// See also [currentLocalTime].
+  const CurrentLocalTimeFamily();
+
+  /// See also [currentLocalTime].
+  CurrentLocalTimeProvider call(LatLng coordinates) {
+    return CurrentLocalTimeProvider(coordinates);
+  }
+
+  @override
+  CurrentLocalTimeProvider getProviderOverride(
+    covariant CurrentLocalTimeProvider provider,
+  ) {
+    return call(provider.coordinates);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'currentLocalTimeProvider';
+}
+
+/// See also [currentLocalTime].
+class CurrentLocalTimeProvider
+    extends AutoDisposeFutureProvider<CachedLocalTime> {
+  /// See also [currentLocalTime].
+  CurrentLocalTimeProvider(LatLng coordinates)
+    : this._internal(
+        (ref) => currentLocalTime(ref as CurrentLocalTimeRef, coordinates),
+        from: currentLocalTimeProvider,
+        name: r'currentLocalTimeProvider',
+        debugGetCreateSourceHash:
+            const bool.fromEnvironment('dart.vm.product')
+                ? null
+                : _$currentLocalTimeHash,
+        dependencies: CurrentLocalTimeFamily._dependencies,
+        allTransitiveDependencies:
+            CurrentLocalTimeFamily._allTransitiveDependencies,
+        coordinates: coordinates,
+      );
+
+  CurrentLocalTimeProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.coordinates,
+  }) : super.internal();
+
+  final LatLng coordinates;
+
+  @override
+  Override overrideWith(
+    FutureOr<CachedLocalTime> Function(CurrentLocalTimeRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: CurrentLocalTimeProvider._internal(
+        (ref) => create(ref as CurrentLocalTimeRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        coordinates: coordinates,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<CachedLocalTime> createElement() {
+    return _CurrentLocalTimeProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CurrentLocalTimeProvider &&
+        other.coordinates == coordinates;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, coordinates.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin CurrentLocalTimeRef on AutoDisposeFutureProviderRef<CachedLocalTime> {
+  /// The parameter `coordinates` of this provider.
+  LatLng get coordinates;
+}
+
+class _CurrentLocalTimeProviderElement
+    extends AutoDisposeFutureProviderElement<CachedLocalTime>
+    with CurrentLocalTimeRef {
+  _CurrentLocalTimeProviderElement(super.provider);
+
+  @override
+  LatLng get coordinates => (origin as CurrentLocalTimeProvider).coordinates;
+}
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

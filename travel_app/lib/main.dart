@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:travel_app/core/constants/colors.dart';
 import 'package:travel_app/core/router/app_router.dart';
 
 void main() {
@@ -7,9 +8,7 @@ void main() {
   // Optional: Setup logging, error reporting, etc. here
   runApp(
     // Wrap the entire app in ProviderScope for Riverpod
-    const ProviderScope(
-      child: MyApp(),
-    ),
+    const ProviderScope(child: MyApp()),
   );
 }
 
@@ -24,9 +23,18 @@ class MyApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Multi User App',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        // Use the ColorScheme you defined
+        colorScheme: lightColorScheme,
+         useMaterial3: true,
       ),
+      // Optionally define a dark theme
+      darkTheme: ThemeData(
+        colorScheme: darkColorScheme, // Your dark scheme definition
+        useMaterial3: true,
+        // Dark theme specific overrides...
+      ),
+      themeAnimationCurve: Curves.bounceInOut,
+      themeMode: ThemeMode.system, // Or ThemeMode.light, ThemeMode.dark
       // Use routerConfig for GoRouter 7.0+
       routerConfig: router,
     );

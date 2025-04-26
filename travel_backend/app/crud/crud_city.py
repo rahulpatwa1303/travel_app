@@ -326,6 +326,7 @@ async def get_city_details_with_open_meteo(
         # We need lat/lon - Assuming City model doesn't have them, get from a place? Or add to City?
         # HACK: Get lat/lon from the first place in the city (inefficient!)
         # Better: Add representative lat/lon columns to the cities table!
+        lat, lon = None, None
         first_place_stmt = select(models.Place.latitude, models.Place.longitude).where(models.Place.city_id == city_id).order_by(models.Place.id).limit(1)
         place_loc_result = await db.execute(first_place_stmt)
         place_loc = place_loc_result.first()
