@@ -44,6 +44,7 @@ dependencies:
   json_serializable: ^6.9.5 # Use latest version
   flutter_echarts: ^2.5.0
   intl: ^0.20.2
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

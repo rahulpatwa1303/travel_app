@@ -4,6 +4,32 @@ from typing import Optional, List
 
 # Define based on OpenWeatherMap (or chosen API) response structure
 # Example simplified structure:
+class CurrentUnits(BaseModel):
+    time: Optional[str] = None
+    interval: Optional[str] = None
+    temperature_2m: Optional[str] = Field(None, alias="temperature2m")
+    is_day: Optional[str] = Field(None, alias="isDay")
+    weathercode: Optional[str] = None
+    windspeed_10m: Optional[str] = Field(None, alias="windspeed10m")
+    winddirection_10m: Optional[str] = Field(None, alias="winddirection10m")
+    # Add other units corresponding to requested 'current' variables
+
+    class Config:
+        allow_population_by_field_name = True
+
+# --- Schema for the CURRENT weather data block ---
+class CurrentWeatherData(BaseModel):
+    time: Optional[str] = None # ISO8601 format
+    interval: Optional[int] = None # Interval seconds (usually 900)
+    temperature_2m: Optional[float] = Field(None, alias="temperature2m")
+    is_day: Optional[int] = Field(None, alias="isDay") # 1 = day, 0 = night
+    weathercode: Optional[int] = None # WMO code
+    windspeed_10m: Optional[float] = Field(None, alias="windspeed10m")
+    winddirection_10m: Optional[int] = Field(None, alias="winddirection10m")
+    # Add other fields corresponding to requested 'current' variables
+
+    class Config:
+        allow_population_by_field_name = True
 class WeatherCondition(BaseModel):
     main: Optional[str] = None # e.g., "Clear", "Clouds", "Rain"
     description: Optional[str] = None
@@ -85,6 +111,9 @@ class OpenMeteoForecastResponse(BaseModel):
     hourly: Optional[HourlyData] = None
     daily_units: Optional[DailyUnits] = Field(None, alias="dailyUnits")
     daily: Optional[DailyData] = None
+
+    current_units: Optional[CurrentUnits] = Field(None, alias="currentUnits")
+    current: Optional[CurrentWeatherData] = None # <<< Add current weather data
 
     class Config:
         allow_population_by_field_name = True

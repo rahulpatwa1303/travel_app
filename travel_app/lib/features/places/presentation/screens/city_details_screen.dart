@@ -1,6 +1,7 @@
 // // lib/features/places/presentation/screens/city_details_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Import your models
 import 'package:travel_app/features/places/domain/city_detail_model.dart';
@@ -11,7 +12,6 @@ import 'package:travel_app/features/places/presentation/widget/cities_places.dar
 import 'package:travel_app/features/places/presentation/widget/cities_time.dart';
 import 'package:travel_app/features/places/presentation/widget/hourly_forecast_chart.dart';
 import 'package:travel_app/widget/floating_heart_button.dart';
-
 
 // Assume placeLikeStateProvider exists
 final placeLikeStateProvider = StateProvider<Map<int, bool>>((ref) => {});
@@ -96,25 +96,190 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
   ];
   // --- End TabController State ---
 
+  // --- State for Scroll-Linked Tabs ---
+  final List<GlobalKey> _sectionKeys = List.generate(
+    4,
+    (_) => GlobalKey(),
+  ); // One key per section
+  // Map to store calculated offsets (index -> offset) - Optional caching
+  // final Map<int, double> _tabOffsets = {};
+  bool _isTapScrolling =
+      false; // Flag to prevent scroll listener reacting to tab taps
+  bool _isScrollUpdatingTabs =
+      false; // Flag to prevent tab listener reacting to scroll updates
+  double _pinnedHeaderHeight =
+      kToolbarHeight; // Approximate initial height, will update
+  // --- End Scroll-Linked Tabs State ---
+  final GlobalKey _tabBarHeaderKey = GlobalKey();
+  late final TabBar
+  _tabBarWidget; // Will initialize in initState/didChangeDependencies
+
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController()..addListener(_onScroll);
     _screenTabController = TabController(length: _tabs.length, vsync: this);
-    // *** ADD THIS LISTENER ***
-    _screenTabController?.addListener(_handleTabSelection);
+    _scrollController = ScrollController();
+
+    // Add listeners
+    _scrollController.addListener(_onScroll); // Existing + new logic
+    _screenTabController?.addListener(
+      _handleTabSelection,
+    ); // Existing + modified logic
+
+    // Get Pinned Header height AFTER first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        // Calculate actual TabBar height (better than kToolbarHeight)
+        final double? headerHeight =
+            _tabBarHeaderKey
+                .currentContext
+                ?.size
+                ?.height; // <<< USE THE NEW KEY
+        final RenderBox? tabBarBox =
+            _sectionKeys[0].currentContext
+                ?.findAncestorRenderObjectOfType<RenderSliverPersistentHeader>()
+                ?.child; // Accessing the delegate's child renderbox MIGHT work, but is fragile.
+        // A simpler approach is often to measure the TabBar itself if possible
+        // Or use a known constant if layout is fixed. Let's stick to approx for now.
+        setState(() {
+          _pinnedHeaderHeight = headerHeight ?? kTextTabBarHeight;
+        });
+        _onScroll(); // Initial check after layout
+      }
+    });
   }
 
-  // *** ADD THIS HANDLER FUNCTION ***
   void _handleTabSelection() {
-    // Ensure the setState is only called if the index has finished changing
-    // and the widget is still mounted.
-    if (_screenTabController != null &&
-        !_screenTabController!.indexIsChanging &&
-        mounted) {
+    if (_screenTabController == null ||
+        _isScrollUpdatingTabs ||
+        !_screenTabController!.indexIsChanging) {
+      // If the change was triggered by scrolling, or it's not user-initiated, do nothing
+      return;
+    }
+
+    final int index = _screenTabController!.index;
+    _scrollToSection(index);
+  }
+
+  // --- New Method: Scroll to a Section ---
+  Future<void> _scrollToSection(int index) async {
+    if (_sectionKeys[index].currentContext == null) {
+      print("Warning: Context for section $index not found, cannot scroll.");
+      return;
+    }
+
+    // Prevent scroll listener from interfering
+    _isTapScrolling = true;
+
+    // Calculate target offset: Section top - pinned header height (approx)
+    // Using ensureVisible is generally more robust as it handles sliver contexts
+    await Scrollable.ensureVisible(
+      _sectionKeys[index].currentContext!,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+      // alignment: 0.0, // Align to the top edge
+      // alignmentPolicy: ScrollPositionAlignmentPolicy.explicit, // Requires specific alignment value
+    );
+
+    // Add a small delay to ensure scroll finishes before allowing scroll listener to update tabs again
+    await Future.delayed(
+      const Duration(milliseconds: 450),
+    ); // Slightly longer than animation
+    if (mounted) {
       setState(() {
-        // The call to setState triggers a rebuild, which will then use
-        // the new _screenTabController.index in the build method.
+        _isTapScrolling = false;
+      });
+    }
+  }
+
+  // --- Modified _onScroll (Handles AppBar Color AND Tab Updates) ---
+  void _onScroll() {
+    // 1. AppBar Color Change Logic (Keep as is)
+    if (!_scrollController.hasClients || !_isSolidColorSet) return;
+    final offset = _scrollController.offset;
+    final threshold = _colorChangeThreshold;
+    final bool showSolid = offset > threshold;
+    final Color targetBgColor =
+        showSolid ? _solidAppBarColor : Colors.transparent;
+    final Color targetIconColor =
+        showSolid ? _solidAppBarIconColor : Colors.white;
+
+    // Update AppBar color state if needed
+    if (_appBarColor != targetBgColor || _appBarIconColor != targetIconColor) {
+      if (mounted) {
+        setState(() {
+          _currentScrollOffset = offset;
+          _appBarColor = targetBgColor;
+          _appBarIconColor = targetIconColor;
+        });
+      }
+    } else if ((_currentScrollOffset - offset).abs() > 1.0 && mounted) {
+      // Still update offset if it changes significantly, even if colors don't
+      setState(() {
+        _currentScrollOffset = offset;
+      });
+    }
+
+    // 2. Tab Update Logic
+    if (_isTapScrolling || _screenTabController == null || !mounted) {
+      // Don't update tabs if we are programmatically scrolling from a tap
+      return;
+    }
+
+    // Determine which tab index corresponds to the current scroll position
+    int? currentVisibleIndex;
+    double closestEdge = double.infinity;
+
+    for (int i = 0; i < _sectionKeys.length; i++) {
+      final keyContext = _sectionKeys[i].currentContext;
+      if (keyContext != null) {
+        final RenderBox? renderBox =
+            keyContext.findRenderObject() as RenderBox?;
+        if (renderBox != null) {
+          // More robust (usually): Find position relative to Scrollable ancestor
+          try {
+            final scrollableBox =
+                Scrollable.of(keyContext)?.context.findRenderObject()
+                    as RenderBox?;
+            if (scrollableBox != null) {
+              final sectionOffsetInScrollable =
+                  renderBox
+                      .localToGlobal(Offset.zero, ancestor: scrollableBox)
+                      .dy;
+              // Calculate distance from the ideal position (just below pinned header)
+              final targetPosition =
+                  _pinnedHeaderHeight +
+                  5; // Target position just below the tab bar + small buffer
+              final distance =
+                  (sectionOffsetInScrollable - targetPosition).abs();
+
+              // Check if this section's top is *above* or very near the target position
+              // and closer than any previous section found
+              if (sectionOffsetInScrollable <= targetPosition + 20 &&
+                  distance < closestEdge) {
+                // Allow a small tolerance window below the target
+                closestEdge = distance;
+                currentVisibleIndex = i;
+              }
+            }
+          } catch (e) {
+            print("Error calculating offset: $e");
+          }
+        }
+      }
+    }
+
+    // Update TabController index if it changed and isn't already animating
+    if (currentVisibleIndex != null &&
+        currentVisibleIndex != _screenTabController!.index &&
+        !_screenTabController!.indexIsChanging) {
+      _isScrollUpdatingTabs = true; // Signal that scroll is causing the update
+      _screenTabController!.animateTo(currentVisibleIndex!);
+      // Reset flag after animation likely started/finished (can be tricky)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _isScrollUpdatingTabs = false;
+        }
       });
     }
   }
@@ -133,41 +298,45 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
       _isSolidColorSet = true;
       // Update initial colors based on scroll position *after* theme colors are set
       _onScroll();
+
+      _tabBarWidget = TabBar(
+        controller:
+            _screenTabController, // Controller needed for correct sizing? Usually not.
+        isScrollable: false,
+        labelColor: Theme.of(context).primaryColor, // Use current theme
+        unselectedLabelColor: Colors.grey[600], // Use current theme
+        indicatorColor: Theme.of(context).primaryColor, // Use current theme
+        tabs: _tabs,
+      );
+
+      // Get the preferred height and update state if it changed
+      final double calculatedHeight = _tabBarWidget.preferredSize.height;
+
+      if (_pinnedHeaderHeight != calculatedHeight) {
+        // Use setState only if needed, prevents unnecessary rebuild cycles if called multiple times
+        setState(() {
+          _pinnedHeaderHeight = calculatedHeight;
+          print(
+            "Pinned Header Height Updated: $_pinnedHeaderHeight",
+          ); // Debugging
+        });
+      }
+
+      // Ensure initial scroll check runs after potential height update
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _onScroll();
+      });
     }
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    // *** REMOVE THE LISTENER ***
     _screenTabController?.removeListener(_handleTabSelection);
+    _scrollController.dispose();
     _screenTabController?.dispose();
     super.dispose();
   }
-
-  // --- Scroll Listener for AppBar Color (Remains the same) ---
-  void _onScroll() {
-    if (!_scrollController.hasClients || !_isSolidColorSet) return;
-    final offset = _scrollController.offset;
-    final threshold = _colorChangeThreshold;
-    final Color targetBgColor =
-        offset > threshold ? _solidAppBarColor : Colors.transparent;
-    final Color targetIconColor =
-        offset > threshold ? _solidAppBarIconColor : Colors.white;
-    if (_appBarColor != targetBgColor ||
-        _appBarIconColor != targetIconColor ||
-        (_currentScrollOffset - offset).abs() > 1.0) {
-      if (mounted) {
-        setState(() {
-          _currentScrollOffset = offset;
-          _appBarColor = targetBgColor;
-          _appBarIconColor = targetIconColor;
-        });
-      }
-    }
-  }
-  // --- End Scroll Listener ---
 
   @override
   Widget build(BuildContext context) {
@@ -324,92 +493,106 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
             pinned: true, // Make the header stick
           ),
 
-          // --- Content Area for the Selected Main Tab ---
-          // Use SliverFillRemaining to fill the rest of the viewport OR
-          // Use SliverToBoxAdapter if content height is known/calculable
-          // Using SliverToBoxAdapter assuming content might vary but won't be infinitely long
-          SliverToBoxAdapter(
-            child: AnimatedSwitcher(
-              // Fade between tab contents
-              duration: const Duration(milliseconds: 300),
-              child: Container(
-                key: ValueKey<int>(
-                  _screenTabController?.index ?? 0,
-                ), // Key by tab index
-                // Add padding for the content INSIDE the tab view area
-                padding: const EdgeInsets.all(16.0),
-                child: _buildSelectedTabContent(
-                  context,
-                  ref,
-                  cityDetailsAsync,
-                  placesInCityAsync,
-                ),
-              ),
+          _buildSectionSliver(
+            context: context,
+            key: _sectionKeys[0], // Key for Overview section
+            child: cityDetailsAsync.when(
+              data: (details) {
+                List<TravelPeriod> parsedTravelPeriods = parseBestTimeToTravel(
+                  details.bestTimeToTravel,
+                );
+                return CityDetailsOverview(
+                  details: details,
+                  parsedTravelPeriods: parsedTravelPeriods,
+                  rawBestTimeText: details.bestTimeToTravel,
+                );
+              },
+              loading: () => _buildLoadingIndicator(),
+              error: (e, s) => _buildErrorWidget("Overview", e),
             ),
+          ),
+
+          _buildSectionSliver(
+            context: context,
+            key: _sectionKeys[1], // Key for Forecast section
+            child: cityDetailsAsync.when(
+              data:
+                  (details) => HourlyForecastChart(
+                    weatherForecast: details.weatherForecast,
+                    
+                    locationKey: details.id.toString(),
+                    lastUpdated: details.weatherLastUpdated,
+                  ),
+              loading: () => _buildLoadingIndicator(),
+              error: (e, s) => _buildErrorWidget("Forecast", e),
+            ),
+          ),
+
+          _buildSectionSliver(
+            context: context,
+            key: _sectionKeys[2], // Key for Sun Times section
+            child: cityDetailsAsync.when(
+              data:
+                  (details) =>
+                      buildCitySunDetailsContent(context, ref, details),
+              loading: () => _buildLoadingIndicator(),
+              error: (e, s) => _buildErrorWidget("Sun Times", e),
+            ),
+          ),
+
+          _buildSectionSliver(
+            context: context,
+            key: _sectionKeys[3], // Key for Places section
+            // Use the stateful widget directly if it handles its own AsyncValue state
+            child: CityPlacesGrid(placesInCityAsync: placesInCityAsync),
+            // Or, if CityPlacesGrid expects List<PlaceByCity>:
+            // child: placesInCityAsync.when(
+            //    data: (places) => CityPlacesGrid(places: places), // Adjust CityPlacesGrid constructor
+            //    loading: () => _buildLoadingIndicator(),
+            //    error: (e, s) => _buildErrorWidget("Places", e),
+            // ),
           ),
         ],
       ),
     );
   } // End build
 
-  // --- Helper to build content based on selected MAIN tab ---
-  Widget _buildSelectedTabContent(
-    BuildContext context,
-    WidgetRef ref,
-    AsyncValue<CityDetail> cityDetailsAsync,
-    AsyncValue<List<PlaceByCity>> placesInCityAsync,
-  ) {
-    final int currentTabIndex = _screenTabController?.index ?? 0;
+  // Helper to build section slivers with padding and key
+  Widget _buildSectionSliver({
+    required BuildContext context,
+    required GlobalKey key,
+    required Widget child,
+  }) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16.0,
+        vertical: 24.0,
+      ), // Add padding around each section
+      sliver: SliverToBoxAdapter(
+         child: Container( // <<< WRAP child in a Container (or KeyedSubtree)
+          key: key,     // <<< ATTACH KEY HERE (to the RenderBox)
+          child: child,
+        ),
+      ),
+    );
+  }
 
-    switch (currentTabIndex) {
-      case 0: // Overview Tab
-        return cityDetailsAsync.when(
-          data: (details) {
-            List<TravelPeriod> parsedTravelPeriods = parseBestTimeToTravel(
-              details.bestTimeToTravel,
-            );
-            String? rawBestTimeText = details.bestTimeToTravel;
-            // Assuming CityDetailsOverview is StatelessWidget
-            return CityDetailsOverview(
-              details: details,
-              parsedTravelPeriods: parsedTravelPeriods,
-              rawBestTimeText: rawBestTimeText,
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text("Error: $e")),
-        );
-      case 1: // Forecast Tab
-        return cityDetailsAsync.when(
-          data:
-              (details) => HourlyForecastChart(
-                hourlyData: details.weatherForecast?.hourly,
-                locationKey: details.id.toString(),
-                lastUpdated: details.weatherLastUpdated,
-              ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text("Error: $e")),
-        );
-      case 2: // Sun Times Tab
-        return cityDetailsAsync.when(
-          data:
-              (details) => buildCitySunDetailsContent(
-                context,
-                ref, // Assuming ref is available here
-                details,
-              ), // Pass details
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text("Error: $e")),
-        );
-      case 3: // Places Tab
-        // Instantiate the stateful grid widget here
-        return CityPlacesGrid(
-          // USE THE STATEFUL WRAPPER
-          placesInCityAsync: placesInCityAsync,
-        );
-      default:
-        return const Center(child: Text("Unknown Tab"));
-    }
+  Widget _buildLoadingIndicator() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 32.0),
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(String sectionName, Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32.0),
+        child: Text('Error loading $sectionName: $error'),
+      ),
+    );
   }
 }
 
@@ -425,6 +608,5 @@ class CityDetailsOverview extends StatelessWidget {
     required this.rawBestTimeText,
   }) : super(key: key);
   @override
-  Widget build(BuildContext context) =>
-      Text('\n${details.description ?? ""}');
+  Widget build(BuildContext context) => Text('\n${details.description ?? ""}');
 }

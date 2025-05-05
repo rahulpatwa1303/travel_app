@@ -46,7 +46,8 @@ async def get_open_meteo_forecast_data(lat: float, lon: float) -> Optional[Dict[
         # Request specific hourly variables
         "hourly": "temperature_2m,is_day,sunshine_duration,weathercode,precipitation_probability",
         "forecast_days": 1, # Get forecast only for the current day (+ next few hours technically)
-        "timezone": "auto" # Automatically detect timezone based on lat/lon
+        "timezone": "auto", # Automatically detect timezone based on lat/lon
+        "current": "temperature_2m,is_day,weathercode,windspeed_10m,winddirection_10m"
     }
     # Use shared client if possible, or create one
     async with httpx.AsyncClient() as client:

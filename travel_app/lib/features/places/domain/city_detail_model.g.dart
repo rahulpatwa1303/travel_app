@@ -23,7 +23,7 @@ _$CityDetailImpl _$$CityDetailImplFromJson(Map<String, dynamic> json) =>
       population: (json['population'] as num?)?.toInt(),
       wikidataId: json['wikidata_id'] as String?,
       detailsLastUpdated: json['details_last_updated'] as String?,
-      currentWeather:
+      currentWeatherDataField:
           json['current_weather'] == null
               ? null
               : CurrentWeather.fromJson(
@@ -53,7 +53,7 @@ Map<String, dynamic> _$$CityDetailImplToJson(_$CityDetailImpl instance) =>
       'population': instance.population,
       'wikidata_id': instance.wikidataId,
       'details_last_updated': instance.detailsLastUpdated,
-      'current_weather': instance.currentWeather,
+      'current_weather': instance.currentWeatherDataField,
       'weather_last_updated': instance.weatherLastUpdated,
       'budget_scale': instance.budgetScale,
       'budget_summary': instance.budgetSummary,
@@ -112,9 +112,9 @@ Map<String, dynamic> _$$WeatherInfoImplToJson(_$WeatherInfoImpl instance) =>
 _$WeatherMainImpl _$$WeatherMainImplFromJson(Map<String, dynamic> json) =>
     _$WeatherMainImpl(
       temp: (json['temp'] as num?)?.toDouble(),
-      feels_like: (json['feels_like'] as num?)?.toDouble(),
-      temp_min: (json['temp_min'] as num?)?.toDouble(),
-      temp_max: (json['temp_max'] as num?)?.toDouble(),
+      feelsLike: (json['feels_like'] as num?)?.toDouble(),
+      tempMin: (json['temp_min'] as num?)?.toDouble(),
+      tempMax: (json['temp_max'] as num?)?.toDouble(),
       pressure: (json['pressure'] as num?)?.toInt(),
       humidity: (json['humidity'] as num?)?.toInt(),
     );
@@ -122,9 +122,9 @@ _$WeatherMainImpl _$$WeatherMainImplFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$$WeatherMainImplToJson(_$WeatherMainImpl instance) =>
     <String, dynamic>{
       'temp': instance.temp,
-      'feels_like': instance.feels_like,
-      'temp_min': instance.temp_min,
-      'temp_max': instance.temp_max,
+      'feels_like': instance.feelsLike,
+      'temp_min': instance.tempMin,
+      'temp_max': instance.tempMax,
       'pressure': instance.pressure,
       'humidity': instance.humidity,
     };
@@ -137,6 +137,54 @@ _$WeatherWindImpl _$$WeatherWindImplFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$$WeatherWindImplToJson(_$WeatherWindImpl instance) =>
     <String, dynamic>{'speed': instance.speed, 'deg': instance.deg};
+
+_$ForecastCurrentUnitsImpl _$$ForecastCurrentUnitsImplFromJson(
+  Map<String, dynamic> json,
+) => _$ForecastCurrentUnitsImpl(
+  time: json['time'] as String?,
+  interval: json['interval'] as String?,
+  temperature2m: json['temperature_2m'] as String?,
+  isDay: json['is_day'] as String?,
+  weathercode: json['weathercode'] as String?,
+  windspeed10m: json['windspeed_10m'] as String?,
+  winddirection10m: json['winddirection_10m'] as String?,
+);
+
+Map<String, dynamic> _$$ForecastCurrentUnitsImplToJson(
+  _$ForecastCurrentUnitsImpl instance,
+) => <String, dynamic>{
+  'time': instance.time,
+  'interval': instance.interval,
+  'temperature_2m': instance.temperature2m,
+  'is_day': instance.isDay,
+  'weathercode': instance.weathercode,
+  'windspeed_10m': instance.windspeed10m,
+  'winddirection_10m': instance.winddirection10m,
+};
+
+_$ForecastCurrentDataImpl _$$ForecastCurrentDataImplFromJson(
+  Map<String, dynamic> json,
+) => _$ForecastCurrentDataImpl(
+  time: json['time'] as String?,
+  interval: (json['interval'] as num?)?.toInt(),
+  temperature2m: (json['temperature2m'] as num?)?.toDouble(),
+  isDay: (json['is_day'] as num?)?.toInt(),
+  weathercode: (json['weathercode'] as num?)?.toInt(),
+  windspeed10m: (json['windspeed_10m'] as num?)?.toDouble(),
+  winddirection10m: (json['winddirection_10m'] as num?)?.toInt(),
+);
+
+Map<String, dynamic> _$$ForecastCurrentDataImplToJson(
+  _$ForecastCurrentDataImpl instance,
+) => <String, dynamic>{
+  'time': instance.time,
+  'interval': instance.interval,
+  'temperature2m': instance.temperature2m,
+  'is_day': instance.isDay,
+  'weathercode': instance.weathercode,
+  'windspeed_10m': instance.windspeed10m,
+  'winddirection_10m': instance.winddirection10m,
+};
 
 _$WeatherForecastImpl _$$WeatherForecastImplFromJson(
   Map<String, dynamic> json,
@@ -159,11 +207,23 @@ _$WeatherForecastImpl _$$WeatherForecastImplFromJson(
           : DailyData.fromJson(json['daily'] as Map<String, dynamic>),
   latitude: (json['latitude'] as num?)?.toDouble(),
   longitude: (json['longitude'] as num?)?.toDouble(),
-  generationtimeMs: (json['generationtimeMs'] as num?)?.toDouble(),
-  utcOffsetSeconds: (json['utcOffsetSeconds'] as num?)?.toInt(),
+  generationtimeMs: (json['generationtime_ms'] as num?)?.toDouble(),
+  utcOffsetSeconds: (json['utc_offset_seconds'] as num?)?.toInt(),
   timezone: json['timezone'] as String?,
-  timezoneAbbreviation: json['timezoneAbbreviation'] as String?,
+  timezoneAbbreviation: json['timezone_abbreviation'] as String?,
   elevation: (json['elevation'] as num?)?.toDouble(),
+  currentUnits:
+      json['currentUnits'] == null
+          ? null
+          : ForecastCurrentUnits.fromJson(
+            json['currentUnits'] as Map<String, dynamic>,
+          ),
+  currentData:
+      json['current'] == null
+          ? null
+          : ForecastCurrentData.fromJson(
+            json['current'] as Map<String, dynamic>,
+          ),
 );
 
 Map<String, dynamic> _$$WeatherForecastImplToJson(
@@ -175,23 +235,33 @@ Map<String, dynamic> _$$WeatherForecastImplToJson(
   'daily': instance.daily,
   'latitude': instance.latitude,
   'longitude': instance.longitude,
-  'generationtimeMs': instance.generationtimeMs,
-  'utcOffsetSeconds': instance.utcOffsetSeconds,
+  'generationtime_ms': instance.generationtimeMs,
+  'utc_offset_seconds': instance.utcOffsetSeconds,
   'timezone': instance.timezone,
-  'timezoneAbbreviation': instance.timezoneAbbreviation,
+  'timezone_abbreviation': instance.timezoneAbbreviation,
   'elevation': instance.elevation,
+  'currentUnits': instance.currentUnits,
+  'current': instance.currentData,
 };
 
 _$HourlyUnitsImpl _$$HourlyUnitsImplFromJson(Map<String, dynamic> json) =>
     _$HourlyUnitsImpl(
-      temperature: json['temperature'] as String?,
       time: json['time'] as String?,
+      temperature2m: json['temperature_2m'] as String?,
+      isDay: json['is_day'] as String?,
+      sunshineDuration: json['sunshine_duration'] as String?,
+      weathercode: json['weathercode'] as String?,
+      precipitationProbability: json['precipitation_probability'] as String?,
     );
 
 Map<String, dynamic> _$$HourlyUnitsImplToJson(_$HourlyUnitsImpl instance) =>
     <String, dynamic>{
-      'temperature': instance.temperature,
       'time': instance.time,
+      'temperature_2m': instance.temperature2m,
+      'is_day': instance.isDay,
+      'sunshine_duration': instance.sunshineDuration,
+      'weathercode': instance.weathercode,
+      'precipitation_probability': instance.precipitationProbability,
     };
 
 _$HourlyDataImpl _$$HourlyDataImplFromJson(Map<String, dynamic> json) =>
@@ -231,33 +301,21 @@ Map<String, dynamic> _$$HourlyDataImplToJson(_$HourlyDataImpl instance) =>
 
 _$DailyUnitsImpl _$$DailyUnitsImplFromJson(Map<String, dynamic> json) =>
     _$DailyUnitsImpl(
-      temperature_max: json['temperature_max'] as String?,
-      temperature_min: json['temperature_min'] as String?,
+      time: json['time'] as String?,
       sunrise: json['sunrise'] as String?,
       sunset: json['sunset'] as String?,
-      time: json['time'] as String?,
     );
 
 Map<String, dynamic> _$$DailyUnitsImplToJson(_$DailyUnitsImpl instance) =>
     <String, dynamic>{
-      'temperature_max': instance.temperature_max,
-      'temperature_min': instance.temperature_min,
+      'time': instance.time,
       'sunrise': instance.sunrise,
       'sunset': instance.sunset,
-      'time': instance.time,
     };
 
 _$DailyDataImpl _$$DailyDataImplFromJson(Map<String, dynamic> json) =>
     _$DailyDataImpl(
       time: (json['time'] as List<dynamic>?)?.map((e) => e as String).toList(),
-      temperature_max:
-          (json['temperature_max'] as List<dynamic>?)
-              ?.map((e) => (e as num).toDouble())
-              .toList(),
-      temperature_min:
-          (json['temperature_min'] as List<dynamic>?)
-              ?.map((e) => (e as num).toDouble())
-              .toList(),
       sunrise:
           (json['sunrise'] as List<dynamic>?)?.map((e) => e as String).toList(),
       sunset:
@@ -267,8 +325,6 @@ _$DailyDataImpl _$$DailyDataImplFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$$DailyDataImplToJson(_$DailyDataImpl instance) =>
     <String, dynamic>{
       'time': instance.time,
-      'temperature_max': instance.temperature_max,
-      'temperature_min': instance.temperature_min,
       'sunrise': instance.sunrise,
       'sunset': instance.sunset,
     };
