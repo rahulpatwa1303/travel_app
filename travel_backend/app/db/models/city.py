@@ -58,6 +58,12 @@ class City(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
 
+    favorited_by_users = relationship(
+        "User",
+        secondary="user_favorite_cities", # Name of the association table
+        back_populates="favorite_cities" # Matches relationship on User model
+    )
+
     # --- END OF NEW COLUMNS ---
 
     # --- Relationships ---

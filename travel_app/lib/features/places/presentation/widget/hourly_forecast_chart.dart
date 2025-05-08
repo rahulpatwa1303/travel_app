@@ -34,7 +34,6 @@ class HourlyForecastChart extends StatelessWidget {
     // --- More Robust Check ---
     // 1. Check if hourly data itself exists
     if (hourlyRaw == null) {
-      print("Debug: hourlyRaw is null.");
       return null;
     }
 
@@ -45,17 +44,11 @@ class HourlyForecastChart extends StatelessWidget {
     final isDayList = hourlyRaw.isDay;
 
     if (timeList == null || tempList == null || codeList == null || isDayList == null) {
-      print("Debug: One or more required hourly lists are null.");
-      print("  timeList: ${timeList == null ? 'null' : 'exists'}");
-      print("  tempList: ${tempList == null ? 'null' : 'exists'}");
-      print("  codeList: ${codeList == null ? 'null' : 'exists'}");
-      print("  isDayList: ${isDayList == null ? 'null' : 'exists'}");
       return null; // Cannot proceed if any essential list is missing
     }
 
     // 3. Check if the time list is empty (no data points)
     if (timeList.isEmpty) {
-       print("Debug: timeList is empty.");
        return null; // No data to chart
     }
 
@@ -65,17 +58,11 @@ class HourlyForecastChart extends StatelessWidget {
         codeList.length != expectedLength ||
         isDayList.length != expectedLength)
     {
-      print("Debug: Hourly data lists have inconsistent lengths.");
-      print("  timeList length: ${timeList.length}");
-      print("  tempList length: ${tempList.length}");
-      print("  codeList length: ${codeList.length}");
-      print("  isDayList length: ${isDayList.length}");
       return null; // Data inconsistency
     }
     // --- End Robust Check ---
 
     // If we reach here, all required lists exist, are non-empty (time), and have the same length.
-    print("Debug: Preparing chart data. Found ${expectedLength} hourly entries.");
     List<Map<String, dynamic>> chartData = [];
     try { // Add try-catch for safety during iteration, although checks should prevent errors
       for (int i = 0; i < expectedLength; i++) {
@@ -112,7 +99,6 @@ class HourlyForecastChart extends StatelessWidget {
         });
       }
     } catch (e, stackTrace) {
-        print("Error during chart data processing loop: $e");
         print(stackTrace);
         return null; // Return null if an error occurs during processing
     }

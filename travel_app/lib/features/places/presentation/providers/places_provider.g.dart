@@ -431,5 +431,120 @@ class _CurrentLocalTimeProviderElement
   LatLng get coordinates => (origin as CurrentLocalTimeProvider).coordinates;
 }
 
+String _$likeACityHash() => r'bcea1c06c60780a8f52966d823cf526b0c3e7778';
+
+/// See also [likeACity].
+@ProviderFor(likeACity)
+const likeACityProvider = LikeACityFamily();
+
+/// See also [likeACity].
+class LikeACityFamily extends Family<AsyncValue<void>> {
+  /// See also [likeACity].
+  const LikeACityFamily();
+
+  /// See also [likeACity].
+  LikeACityProvider call(int cityId) {
+    return LikeACityProvider(cityId);
+  }
+
+  @override
+  LikeACityProvider getProviderOverride(covariant LikeACityProvider provider) {
+    return call(provider.cityId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'likeACityProvider';
+}
+
+/// See also [likeACity].
+class LikeACityProvider extends AutoDisposeFutureProvider<void> {
+  /// See also [likeACity].
+  LikeACityProvider(int cityId)
+    : this._internal(
+        (ref) => likeACity(ref as CityDetailsRef, cityId),
+        from: likeACityProvider,
+        name: r'likeACityProvider',
+        debugGetCreateSourceHash:
+            const bool.fromEnvironment('dart.vm.product')
+                ? null
+                : _$likeACityHash,
+        dependencies: LikeACityFamily._dependencies,
+        allTransitiveDependencies: LikeACityFamily._allTransitiveDependencies,
+        cityId: cityId,
+      );
+
+  LikeACityProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.cityId,
+  }) : super.internal();
+
+  final int cityId;
+
+  @override
+  Override overrideWith(FutureOr<void> Function(LikeACityRef provider) create) {
+    return ProviderOverride(
+      origin: this,
+      override: LikeACityProvider._internal(
+        (ref) => create(ref as LikeACityRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        cityId: cityId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<void> createElement() {
+    return _LikeACityProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LikeACityProvider && other.cityId == cityId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, cityId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin LikeACityRef on AutoDisposeFutureProviderRef<void> {
+  /// The parameter `cityId` of this provider.
+  int get cityId;
+}
+
+class _LikeACityProviderElement extends AutoDisposeFutureProviderElement<void>
+    with LikeACityRef {
+  _LikeACityProviderElement(super.provider);
+
+  @override
+  int get cityId => (origin as LikeACityProvider).cityId;
+}
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

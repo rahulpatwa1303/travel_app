@@ -2381,9 +2381,9 @@ mixin _$WeatherForecast {
   double? get latitude => throw _privateConstructorUsedError;
   double? get longitude => throw _privateConstructorUsedError;
   @JsonKey(name: 'generationtime_ms')
-  double? get generationtimeMs => throw _privateConstructorUsedError;
-  @JsonKey(name: 'utc_offset_seconds')
-  int? get utcOffsetSeconds => throw _privateConstructorUsedError;
+  double? get generationtimeMs => throw _privateConstructorUsedError; // --- CORRECTED JsonKey name ---
+  @JsonKey(name: 'utcOffsetSeconds')
+  int? get utcOffsetSeconds => throw _privateConstructorUsedError; // --- End Correction ---
   String? get timezone => throw _privateConstructorUsedError;
   @JsonKey(name: 'timezone_abbreviation')
   String? get timezoneAbbreviation => throw _privateConstructorUsedError;
@@ -2420,7 +2420,7 @@ abstract class $WeatherForecastCopyWith<$Res> {
     double? latitude,
     double? longitude,
     @JsonKey(name: 'generationtime_ms') double? generationtimeMs,
-    @JsonKey(name: 'utc_offset_seconds') int? utcOffsetSeconds,
+    @JsonKey(name: 'utcOffsetSeconds') int? utcOffsetSeconds,
     String? timezone,
     @JsonKey(name: 'timezone_abbreviation') String? timezoneAbbreviation,
     double? elevation,
@@ -2639,7 +2639,7 @@ abstract class _$$WeatherForecastImplCopyWith<$Res>
     double? latitude,
     double? longitude,
     @JsonKey(name: 'generationtime_ms') double? generationtimeMs,
-    @JsonKey(name: 'utc_offset_seconds') int? utcOffsetSeconds,
+    @JsonKey(name: 'utcOffsetSeconds') int? utcOffsetSeconds,
     String? timezone,
     @JsonKey(name: 'timezone_abbreviation') String? timezoneAbbreviation,
     double? elevation,
@@ -2772,7 +2772,7 @@ class _$WeatherForecastImpl implements _WeatherForecast {
     this.latitude,
     this.longitude,
     @JsonKey(name: 'generationtime_ms') this.generationtimeMs,
-    @JsonKey(name: 'utc_offset_seconds') this.utcOffsetSeconds,
+    @JsonKey(name: 'utcOffsetSeconds') this.utcOffsetSeconds,
     this.timezone,
     @JsonKey(name: 'timezone_abbreviation') this.timezoneAbbreviation,
     this.elevation,
@@ -2799,9 +2799,11 @@ class _$WeatherForecastImpl implements _WeatherForecast {
   @override
   @JsonKey(name: 'generationtime_ms')
   final double? generationtimeMs;
+  // --- CORRECTED JsonKey name ---
   @override
-  @JsonKey(name: 'utc_offset_seconds')
+  @JsonKey(name: 'utcOffsetSeconds')
   final int? utcOffsetSeconds;
+  // --- End Correction ---
   @override
   final String? timezone;
   @override
@@ -2899,7 +2901,7 @@ abstract class _WeatherForecast implements WeatherForecast {
     final double? latitude,
     final double? longitude,
     @JsonKey(name: 'generationtime_ms') final double? generationtimeMs,
-    @JsonKey(name: 'utc_offset_seconds') final int? utcOffsetSeconds,
+    @JsonKey(name: 'utcOffsetSeconds') final int? utcOffsetSeconds,
     final String? timezone,
     @JsonKey(name: 'timezone_abbreviation') final String? timezoneAbbreviation,
     final double? elevation,
@@ -2925,10 +2927,10 @@ abstract class _WeatherForecast implements WeatherForecast {
   double? get longitude;
   @override
   @JsonKey(name: 'generationtime_ms')
-  double? get generationtimeMs;
+  double? get generationtimeMs; // --- CORRECTED JsonKey name ---
   @override
-  @JsonKey(name: 'utc_offset_seconds')
-  int? get utcOffsetSeconds;
+  @JsonKey(name: 'utcOffsetSeconds')
+  int? get utcOffsetSeconds; // --- End Correction ---
   @override
   String? get timezone;
   @override

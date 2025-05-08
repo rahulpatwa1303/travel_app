@@ -369,3 +369,68 @@ async def get_city_details_with_open_meteo(
     #     # Update city_data dictionary with results if fetched inline
 
     return city_data
+
+async def search_cities(
+    db: AsyncSession,
+    *,
+    q: Optional[str] = None, # Search query for name
+    country_name: Optional[str] = None,
+    skip: int = 0,
+    limit: int = settings.DEFAULT_PAGE_SIZE
+) -> List[Dict[str, Any]]: # Return dicts matching schema structure
+    """
+    Searches for cities by name (partial, case-insensitive) and/or country.
+    Includes existing cached images but does NOT trigger background fetching.
+    Supports pagination.
+    """
+    logger.info(f"Searching cities: q='{q}', country='{country_name}', skip={skip}, limit={limit}")
+
+    # --- 1. Base Query + Eager Loading ---
+    stmt = select(models.City).options(
+        selectinload(models.City.country), # Load country
+        # Load existing images - only the URL needed for the list schema
+        selectinload(models.City.images).load_only(models.CityImage.image_url)
+    )
+
+    # --- 2. Apply Filters ---
+    if q:
+        # Case-insensitive partial match on city name
+        stmt = stmt.where(models.City.name.ilike(f"%{q}%"))
+
+    if country_name:
+        # Join and filter by country name (case-insensitive)
+        # Ensure join only happens if needed to avoid unnecessary complexity
+        stmt = stmt.join(models.City.country, isouter=True).where(
+            sql_func.lower(models.Country.name).contains(sql_func.lower(country_name))
+        )
+
+    # --- 3. Sorting & Pagination ---
+    stmt = stmt.order_by(models.City.name.asc()).offset(skip).limit(limit)
+
+    # --- 4. Execute Query ---
+    result = await db.execute(stmt)
+    # Use unique() if joins might cause duplicates (like the country join)
+    cities: List[models.City] = result.scalars().unique().all()
+
+    if not cities:
+        logger.info("No cities found matching search criteria.")
+        return []
+
+    # --- 5. Prepare Response Data (similar to get_popular_cities) ---
+    # NO background task triggering here!
+    cities_data = []
+    for city in cities:
+        city_info = {
+            "id": city.id,
+            "name": city.name,
+            "country": city.country, # Assumes country was eager loaded
+            "images": [img.image_url for img in city.images] if city.images else [] # Use eager loaded images
+        }
+        # Add other fields needed by the CitySchema for lists if necessary
+        # e.g., budget fields if they were part of City schema
+        # city_info["budget_scale"] = city.budget_scale
+        # city_info["budget_summary"] = city.budget_summary
+        cities_data.append(city_info)
+
+    logger.info(f"Found {len(cities_data)} cities matching search.")
+    return cities_data

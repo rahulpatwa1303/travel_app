@@ -6,7 +6,7 @@ import 'package:travel_app/features/places/presentation/controllers/helper.dart'
 
   Widget buildBestTimeSection(
     BuildContext context,
-    List<TravelPeriod> parsedTravelPeriods,
+   List<TravelPeriod> parsedTravelPeriods, 
     String? rawBestTimeText,
   ) {
     // Your existing implementation for the best time carousel or raw text

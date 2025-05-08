@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from .user_favorite import UserFavorite # Import only for type hinting
     from .user_visit_history import UserVisitHistory
     from .place import Place # Import Place for favorite_places relationship
-
+    from .city import City  
 
 class User(Base):
     __tablename__ = "users" # Good practice to explicitly name the table
@@ -35,7 +35,12 @@ class User(Base):
         back_populates="favorited_by_users" # Matches relationship name on Place model
         # lazy="selectin" # Strategy for loading favorite places
     )
-
+    favorite_cities = relationship(
+        "City",
+        secondary="user_favorite_cities", # Name of the association table
+        back_populates="favorited_by_users", # Matches relationship on City model
+        lazy="selectin" # Or other loading strategy
+    )
 
     # Add relationships here if needed, e.g.:
     # places = relationship("Place", back_populates="owner")

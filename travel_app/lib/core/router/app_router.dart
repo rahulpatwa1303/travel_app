@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:travel_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:travel_app/features/places/domain/top_place_model.dart';
+import 'package:travel_app/features/places/presentation/providers/liked_cities_notifier.dart';
 import 'package:travel_app/features/places/presentation/screens/city_details_screen.dart';
 
 // Import your screens
@@ -30,43 +31,48 @@ final routerProvider = Provider<GoRouter>((ref) {
   final shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
   final authState = ref.watch(authControllerProvider);
-
   return GoRouter(
     navigatorKey: rootNavigatorKey, // Use the key defined above
     initialLocation: AppRoutePaths.home,
     debugLogDiagnostics: true,
 
     redirect: (BuildContext context, GoRouterState state) {
-      final currentState = ref.read(authControllerProvider); // Read current state
-       print("Redirect Check: Current Auth State = $currentState, Target Location = ${state.uri}"); // Debugging
+      final currentState = ref.read(
+        authControllerProvider,
+      ); // Read current state
+      print(
+        "Redirect Check: Current Auth State = $currentState, Target Location = ${state.uri}",
+      ); // Debugging
 
       final isLoggingIn = state.matchedLocation == '/login';
 
       // Handle loading state (optional, prevents flicker during initial check)
       if (currentState == AuthState.unknown) {
-         print("Redirect: Auth state unknown, waiting..."); // Debugging
-         // Show a loading screen or return null to wait
-         // Returning null might cause issues if initial check is slow.
-         // Consider a dedicated loading route or widget.
-         return null; // Stay on current route while checking
+        print("Redirect: Auth state unknown, waiting..."); // Debugging
+        // Show a loading screen or return null to wait
+        // Returning null might cause issues if initial check is slow.
+        // Consider a dedicated loading route or widget.
+        return null; // Stay on current route while checking
       }
 
       // If user is not authenticated:
       if (currentState != AuthState.authenticated) {
-         print("Redirect: Not authenticated."); // Debugging
+        print("Redirect: Not authenticated."); // Debugging
         // If they are not on the login page, redirect them there.
         return isLoggingIn ? null : '/login';
       }
 
       // If user IS authenticated:
       if (isLoggingIn) {
-         print("Redirect: Authenticated but on login page, redirecting to home."); // Debugging
+        print(
+          "Redirect: Authenticated but on login page, redirecting to home.",
+        ); // Debugging
         // If they are authenticated and somehow landed on login, redirect home.
         return '/';
       }
 
       // No redirect needed
-       print("Redirect: No redirect needed."); // Debugging
+      print("Redirect: No redirect needed."); // Debugging
       return null;
     },
 
@@ -85,16 +91,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           // Extract the placeId from the path parameters
           final placeId = state.pathParameters['placeId'];
-                    // --- Extract extra data ---
+          // --- Extract extra data ---
           final extraData = state.extra;
           TopPlace? initialPlaceData; // Make it nullable
 
           if (extraData is TopPlace) {
-             // Safely cast if it's the expected type
-             initialPlaceData = extraData;
+            // Safely cast if it's the expected type
+            initialPlaceData = extraData;
           } else if (extraData != null) {
-             // Optional: Log if 'extra' is not the expected type
-             print("Warning: Unexpected data type received in 'extra': ${extraData.runtimeType}");
+            // Optional: Log if 'extra' is not the expected type
+            print(
+              "Warning: Unexpected data type received in 'extra': ${extraData.runtimeType}",
+            );
           }
 
           if (placeId == null) {
@@ -103,7 +111,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               body: Center(child: Text("Error: Missing Place ID")),
             );
           }
-          return CityDetailsScreen(placeId: placeId,initialPlaceData: initialPlaceData,);
+          return CityDetailsScreen(
+            placeId: placeId,
+            initialPlaceData: initialPlaceData,
+          );
         },
       ),
       // ShellRoute for authenticated routes with Bottom Nav Bar
@@ -117,24 +128,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutePaths.home,
             name: 'home',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: PlacesScreen(),
-            ),
+            pageBuilder:
+                (context, state) =>
+                    const NoTransitionPage(child: PlacesScreen()),
           ),
           GoRoute(
             path: AppRoutePaths.profile,
             name: 'profile',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProfileScreen(),
-            ),
+            pageBuilder:
+                (context, state) =>
+                    const NoTransitionPage(child: ProfileScreen()),
           ),
           // Add more routes/tabs here later
         ],
       ),
     ],
-     errorBuilder: (context, state) {
-       print("GoRouter Error: ${state.error}");
-       return Scaffold(body: Center(child: Text("Oops! Page not found.\n${state.error}")));
-     }
+    errorBuilder: (context, state) {
+      print("GoRouter Error: ${state.error}");
+      return Scaffold(
+        body: Center(child: Text("Oops! Page not found.\n${state.error}")),
+      );
+    },
   );
 });

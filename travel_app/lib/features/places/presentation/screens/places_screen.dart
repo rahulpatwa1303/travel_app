@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:travel_app/core/router/app_router.dart';
 import 'package:travel_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:travel_app/features/places/domain/place_model.dart'; // Still needed for Category section
 import 'package:travel_app/features/places/domain/place_state.dart';
@@ -9,7 +10,9 @@ import 'package:travel_app/features/places/domain/top_place_model.dart'; // Need
 import 'package:travel_app/features/places/presentation/controllers/places_controller.dart';
 // Import the State and Notifier for infinite scroll
 import 'package:travel_app/features/places/presentation/widget/carousel_view.dart';
+import 'package:travel_app/features/places/presentation/widget/city_autocomplete_search.dart';
 import 'package:travel_app/widget/floating_heart_button.dart';
+import 'package:go_router/go_router.dart';
 
 // Import other providers
 import '../providers/places_provider.dart'; // Contains placesCategoriesProvider, placesProvider
@@ -499,88 +502,125 @@ class PlacesScreen extends ConsumerWidget {
     );
     // --- End Build Category Places section ---
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Places'), // Updated title
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh Top Places',
-            onPressed: () {
-              // Invalidate the NEW paginatedTopPlacesProvider to trigger a refetch from offset 0
-              ref.invalidate(paginatedTopPlacesProvider);
-              // Optionally invalidate categories/places as well if needed
-              // ref.invalidate(placesCategoriesProvider);
-              // ref.invalidate(placesProvider(categoryPlacesParams)); // Requires categoryParams available here
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () async {
-              // Invalidate relevant providers before logging out
-              ref.invalidate(paginatedTopPlacesProvider);
-              ref.invalidate(placesCategoriesProvider);
-              // Note: invalidating placesProvider requires its parameter, potentially tricky here
-              // ref.invalidate(placesProvider(categoryPlacesParams));
-              await ref.read(authControllerProvider.notifier).logout();
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.refresh(paginatedTopPlacesProvider);
-          ref.refresh(placesCategoriesProvider);
-        },
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start, // Align sections to the start
-            children: [
-              // Integrate the built Top Places section widget
-              topPlacesSection,
-              const SizedBox(height: 24), // Add space between sections
-              FloatingHeartLikeButton(
-                initialIsLiked: true,
-                size: 24, // Adjust size as needed
-                onLikedChanged: (bool liked) {
-                  // print("Place ${place.id} liked: $liked");
-                  // // Update the state using the provider
-                  // ref.read(placeLikeStateProvider.notifier).update((state) {
-                  //    // Create a mutable copy, update, return immutable
-                  //    final newState = Map<int, bool>.from(state);
-                  //    newState[place.id] = liked;
-                  //    return newState;
-                  // });
-                  // TODO: Add logic here to sync with your backend API
-                },
-              ),
-              // Integrate the built Categories section widget
-              categorySection,
+    void _unfocus(BuildContext context) {
+      FocusScopeNode currentFocus = FocusScope.of(context);
+      if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+        // currentFocus.focusedChild!.unfocus(); // This might be too aggressive
+        FocusManager.instance.primaryFocus?.unfocus(); // More common way
+      }
+    }
 
-              // You might have other sections here
-              const SizedBox(height: 24),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 18),
-                child: Text(
-                  'Other Sections...',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return GestureDetector(
+      onTap: () => _unfocus(context),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Places'), // Updated title
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh Top Places',
+              onPressed: () {
+                // Invalidate the NEW paginatedTopPlacesProvider to trigger a refetch from offset 0
+                ref.invalidate(paginatedTopPlacesProvider);
+                // Optionally invalidate categories/places as well if needed
+                // ref.invalidate(placesCategoriesProvider);
+                // ref.invalidate(placesProvider(categoryPlacesParams)); // Requires categoryParams available here
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Logout',
+              onPressed: () async {
+                // Invalidate relevant providers before logging out
+                ref.invalidate(paginatedTopPlacesProvider);
+                ref.invalidate(placesCategoriesProvider);
+                // Note: invalidating placesProvider requires its parameter, potentially tricky here
+                // ref.invalidate(placesProvider(categoryPlacesParams));
+                await ref.read(authControllerProvider.notifier).logout();
+              },
+            ),
+          ],
+        ),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            ref.refresh(paginatedTopPlacesProvider);
+            ref.refresh(placesCategoriesProvider);
+          },
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start, // Align sections to the start
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: CityAutocompleteSearch(
+                    hintText: 'Enter city name...',
+                    onSuggestionSelected: (suggestion) {
+                      // Handle the selected city
+                      final detailPath = AppRoutePaths.cityDetails.replaceFirst(
+                        ':placeId',
+                        suggestion.id.toString(),
+                      );
+                      // detailPath should now be '/place/199' (if place.id is 199)
+                      print(
+                        'Navigating to: $detailPath',
+                      ); // Add this print statement
+                      context.push(detailPath, extra: suggestion);
+                      print(
+                        'Selected city: ${suggestion.name} (ID: ${suggestion.id})',
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('You selected: ${suggestion.name}'),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 200), // Placeholder space
-            ],
+                // Integrate the built Top Places section widget
+                topPlacesSection,
+                const SizedBox(height: 24), // Add space between sections
+                FloatingHeartLikeButton(
+                  initialIsLiked: true,
+                  size: 24, // Adjust size as needed
+                  onLikedChanged: (bool liked) {
+                    // print("Place ${place.id} liked: $liked");
+                    // // Update the state using the provider
+                    // ref.read(placeLikeStateProvider.notifier).update((state) {
+                    //    // Create a mutable copy, update, return immutable
+                    //    final newState = Map<int, bool>.from(state);
+                    //    newState[place.id] = liked;
+                    //    return newState;
+                    // });
+                    // TODO: Add logic here to sync with your backend API
+                  },
+                ),
+                // Integrate the built Categories section widget
+                categorySection,
+
+                // You might have other sections here
+                const SizedBox(height: 24),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 18),
+                  child: Text(
+                    'Other Sections...',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 200), // Placeholder space
+              ],
+            ),
           ),
         ),
+        // Consider removing the FAB if the AppBar refresh is sufficient
+        // floatingActionButton: FloatingActionButton(
+        //   onPressed: () {
+        //      ref.invalidate(paginatedTopPlacesProvider); // Refresh top places data
+        //   },
+        //   tooltip: 'Refresh Top Places',
+        //   child: const Icon(Icons.refresh),
+        // ),
       ),
-      // Consider removing the FAB if the AppBar refresh is sufficient
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {
-      //      ref.invalidate(paginatedTopPlacesProvider); // Refresh top places data
-      //   },
-      //   tooltip: 'Refresh Top Places',
-      //   child: const Icon(Icons.refresh),
-      // ),
     );
   }
 }

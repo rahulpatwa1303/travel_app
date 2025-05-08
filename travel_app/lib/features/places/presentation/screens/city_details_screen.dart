@@ -3,38 +3,175 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:travel_app/features/places/data/repositories/places_repository.dart';
 // Import your models
 import 'package:travel_app/features/places/domain/city_detail_model.dart';
 import 'package:travel_app/features/places/domain/place_by_city_model.dart'; // Use PlaceByCity
 import 'package:travel_app/features/places/domain/top_place_model.dart'; // For initial data
+import 'package:travel_app/features/places/presentation/controllers/helper.dart';
+import 'package:travel_app/features/places/presentation/providers/liked_cities_notifier.dart';
 import 'package:travel_app/features/places/presentation/providers/places_provider.dart';
+import 'package:travel_app/features/places/presentation/widget/best_time_to_travel.dart';
 import 'package:travel_app/features/places/presentation/widget/cities_places.dart';
 import 'package:travel_app/features/places/presentation/widget/cities_time.dart';
 import 'package:travel_app/features/places/presentation/widget/hourly_forecast_chart.dart';
 import 'package:travel_app/widget/floating_heart_button.dart';
 
+// Remove any conflicting import that might bring in the old local definition
 // Assume placeLikeStateProvider exists
 final placeLikeStateProvider = StateProvider<Map<int, bool>>((ref) => {});
 
 // Define TravelPeriod class if not imported
-class TravelPeriod {
-  final String when, why;
-  const TravelPeriod({required this.when, required this.why});
-}
+// class TravelPeriod {
+//   final String when, why;
+//   const TravelPeriod({required this.when, required this.why});
+// }
 
 // Assume parseBestTimeToTravel function is available
-List<TravelPeriod> parseBestTimeToTravel(String? rawText) {
-  return [];
-}
+// List<TravelPeriod> parseBestTimeToTravel(String? rawText) {
+//   // 1. Handle null or empty input
+//   if (rawText == null || rawText.trim().isEmpty) {
+//     return [];
+//   }
+
+//   // 2. Basic cleaning: Remove leading/trailing whitespace and potential quote pairs
+//   String cleanedText = rawText.trim();
+//   if (cleanedText.startsWith("'") && cleanedText.endsWith("'")) {
+//     cleanedText = cleanedText.substring(1, cleanedText.length - 1);
+//   }
+//   // Also handle potential trailing comma from copy-paste errors like `...',`
+//    if (cleanedText.endsWith(',')) {
+//       cleanedText = cleanedText.substring(0, cleanedText.length - 1);
+//    }
+//   cleanedText = cleanedText.trim(); // Trim again after potential modifications
+
+//   // 3. Split into potential sentences or distinct period descriptions using '.' as a primary separator
+//   // Filter out empty strings that might result from splitting (e.g., double periods)
+//   List<String> potentialPeriods = cleanedText
+//       .split('.')
+//       .map((s) => s.trim()) // Trim each potential part
+//       .where((s) => s.isNotEmpty) // Keep only non-empty parts
+//       .toList();
+
+//   List<TravelPeriod> parsedPeriods = [];
+
+//   // 4. Process each potential period description
+//   for (String part in potentialPeriods) {
+//     // 5. Look for the colon ':' which often separates 'when' from 'why'
+//     int colonIndex = part.indexOf(':');
+
+//     if (colonIndex != -1) {
+//       // Found a colon, assume 'when: why' structure
+//       String whenPart = part.substring(0, colonIndex).trim();
+//       String whyPart = part.substring(colonIndex + 1).trim();
+
+//       // Basic validation: only add if both parts seem to have content
+//       if (whenPart.isNotEmpty && whyPart.isNotEmpty) {
+//         // Create the TravelPeriod object (ensure this uses the class from helper.dart)
+//         parsedPeriods.add(TravelPeriod(when: whenPart, why: whyPart));
+//       }
+//       // Optional: Handle cases where only one part is present?
+//       // else { print("Warning: Found colon but missing when/why in part: '$part'"); }
+
+//     } else {
+//       // 6. No colon found in this part.
+//       // It *might* be a general statement or formatted differently.
+//       // For simplicity in this version, we'll only capture parts with a clear colon separator.
+//       // More complex logic (e.g., Regex for "Month to Month") could be added here if needed.
+//       print("Info: Skipping part without colon separator: '$part'");
+//     }
+//   }
+
+//   // 7. Return the list of successfully parsed periods
+//   return parsedPeriods;
+// }
 
 // --- Delegate for Sticky TabBar ---
+// class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+//   const _SliverTabBarDelegate(this.tabBar);
+//   final TabBar tabBar;
+//   @override
+//   double get minExtent => tabBar.preferredSize.height;
+//   @override
+//   double get maxExtent => tabBar.preferredSize.height;
+//   @override
+//   Widget build(
+//     BuildContext context,
+//     double shrinkOffset,
+//     bool overlapsContent,
+//   ) {
+//     return Container(
+//       color: Theme.of(context).scaffoldBackgroundColor,
+//       child: tabBar,
+//     );
+//   }
+
+//   @override
+//   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) =>
+//       tabBar != oldDelegate.tabBar ||
+//       tabBar.controller != oldDelegate.tabBar.controller;
+// }
+
+// --- Delegate for the Sticky TabBar ---
+// class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+//   _SliverTabBarDelegate(this.tabBar, {required this.backgroundColor});
+
+//   final TabBar tabBar;
+//   final Color backgroundColor;
+
+//   double get _tabBarHeight {
+//     double height = tabBar.preferredSize.height;
+//     if (tabBar.padding is EdgeInsets) {
+//       height += (tabBar.padding as EdgeInsets).vertical;
+//     }
+//     return height;
+//   }
+
+//   @override
+//   double get minExtent => _tabBarHeight;
+//   @override
+//   double get maxExtent => _tabBarHeight;
+
+//   @override
+//   Widget build(
+//       BuildContext context, double shrinkOffset, bool overlapsContent) {
+//     return Container(
+//       color: backgroundColor, // Apply background color to the entire persistent header area
+//       child: tabBar,
+//     );
+//   }
+
+//   @override
+//   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
+//     return tabBar != oldDelegate.tabBar ||
+//            backgroundColor != oldDelegate.backgroundColor;
+//   }
+// }
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  const _SliverTabBarDelegate(this.tabBar);
+  _SliverTabBarDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+    required this.topSafeAreaPadding,
+  });
+
   final TabBar tabBar;
+  final Color backgroundColor;
+  final double topSafeAreaPadding;
+
+  double get _tabBarContentHeight {
+    double height = tabBar.preferredSize.height;
+    final tabBarOwnPadding = tabBar.padding;
+    if (tabBarOwnPadding is EdgeInsets) {
+      height += tabBarOwnPadding.vertical;
+    }
+    return height;
+  }
+
   @override
-  double get minExtent => tabBar.preferredSize.height;
+  double get minExtent => _tabBarContentHeight + topSafeAreaPadding;
   @override
-  double get maxExtent => tabBar.preferredSize.height;
+  double get maxExtent => _tabBarContentHeight + topSafeAreaPadding;
+
   @override
   Widget build(
     BuildContext context,
@@ -42,15 +179,18 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: EdgeInsets.only(top: topSafeAreaPadding),
+      color: backgroundColor,
       child: tabBar,
     );
   }
 
   @override
-  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) =>
-      tabBar != oldDelegate.tabBar ||
-      tabBar.controller != oldDelegate.tabBar.controller;
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
+    return tabBar != oldDelegate.tabBar ||
+        backgroundColor != oldDelegate.backgroundColor ||
+        topSafeAreaPadding != oldDelegate.topSafeAreaPadding;
+  }
 }
 
 // --- CityDetailsScreen StatefulWidget ---
@@ -371,7 +511,9 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
         (displayImageUrl == null || displayImageUrl.isEmpty);
     final heroTag = 'place-image-${widget.placeId}';
     // final isLiked = ref.watch(placeLikeStateProvider)[cityIdInt] ?? false;
+    final double topSafeArea = MediaQuery.paddingOf(context).top;
 
+    final likedCitiesAsyncValue = ref.watch(likedCitiesProvider);
     return Scaffold(
       body: CustomScrollView(
         controller: _scrollController,
@@ -379,7 +521,9 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
           // --- SliverAppBar ---
           SliverAppBar(
             expandedHeight: 300.0,
-            pinned: true,
+            // pinned: false,
+            floating: true,
+            snap: true,
             backgroundColor: _appBarColor,
             foregroundColor: _appBarIconColor,
             /* ... other AppBar properties (elevation, surfaceTintColor) ... */
@@ -396,28 +540,66 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
               child: BackButton(color: _appBarIconColor), // Icon color changes
             ),
             actions: <Widget>[
-              Container(
-                child: FloatingHeartLikeButton(
-                  initialIsLiked: true,
-                  size: 24, // Adjust size as needed
-                  onLikedChanged: (bool liked) {
-                    // print("Place ${place.id} liked: $liked");
-                    // // Update the state using the provider
-                    // ref.read(placeLikeStateProvider.notifier).update((state) {
-                    //    // Create a mutable copy, update, return immutable
-                    //    final newState = Map<int, bool>.from(state);
-                    //    newState[place.id] = liked;
-                    //    return newState;
-                    // });
-                    // TODO: Add logic here to sync with your backend API
-                  },
-                ),
+              likedCitiesAsyncValue.when(
+                data: (likedIds) {
+                  final bool isCurrentlyLiked =
+                      cityIdInt != -1 && likedIds.contains(cityIdInt);
+
+                  return Container(
+                    child: FloatingHeartLikeButton(
+                      key: ValueKey('like-button-$cityIdInt-$isCurrentlyLiked'),
+                      initialIsLiked: isCurrentlyLiked,
+                      size: 24, // Adjust size as needed
+
+                      onLikedChanged: (bool buttonWantsToBecomeLiked) async {
+                        if (cityIdInt == -1) {
+                          print(
+                            "Error: City ID is invalid ($cityIdInt), cannot like/unlike.",
+                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Cannot update like status: Invalid City ID.",
+                                ),
+                              ),
+                            );
+                          }
+                          return; // Prevent action and visual change if ID is invalid
+                        }
+
+                        final notifier = ref.read(likedCitiesProvider.notifier);
+
+                        try {
+                          if (buttonWantsToBecomeLiked) {
+                            await notifier.likeCity(cityIdInt);
+                            print("Action: Attempted to LIKE city $cityIdInt");
+                          } else {
+                            await notifier.dislikeCity(cityIdInt);
+                            print(
+                              "Action: Attempted to DISLIKE city $cityIdInt",
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Failed to update like status: ${e.toString()}',
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                        ;
+                      },
+                    ),
+                  );
+                },
+                loading: () => Container(),
+                error: (error, stackTrace) => Container(),
               ),
             ],
-            title: Text(
-              displayName,
-              style: TextStyle(fontSize: 18, color: _appBarIconColor),
-            ),
             centerTitle: true,
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [StretchMode.zoomBackground],
@@ -453,7 +635,7 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
                 16.0,
-                16.0,
+                20.0,
                 16.0,
                 0,
               ), // Adjust padding
@@ -466,10 +648,12 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    displayCountry,
-                    style: Theme.of(context).textTheme.titleMedium,
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6.0),
+                    child: Text(
+                      displayCountry,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ),
                   // Removed SizedBox(height: 24) here
                 ],
@@ -479,14 +663,42 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
           // --- Sticky Header for Main Tabs ---
           SliverPersistentHeader(
             delegate: _SliverTabBarDelegate(
-              TabBar(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              topSafeAreaPadding: topSafeArea,
+              tabBar: TabBar(
+                padding: EdgeInsets.all(10),
                 controller:
                     _screenTabController, // Use the screen's TabController
                 isScrollable:
                     false, // Make tabs fit screen width or scroll if needed
                 labelColor: Theme.of(context).primaryColor,
+                labelPadding: EdgeInsets.symmetric(horizontal: 8.0),
+                dividerHeight: 0,
                 unselectedLabelColor: Colors.grey[600],
                 indicatorColor: Theme.of(context).primaryColor,
+                // --- Indicator Customization ---
+                indicatorSize:
+                    TabBarIndicatorSize
+                        .tab, // Make indicator span the entire tab width
+                indicatorPadding: EdgeInsets.symmetric(
+                  vertical: 2.0,
+                  horizontal: 4.0,
+                ),
+                indicatorWeight: 0,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8.0),
+
+                  border: Border.all(
+                    color:
+                        Theme.of(
+                          context,
+                        ).primaryColor, // Color of the box border
+                    width: 2.0, // Thickness of the box border
+                  ),
+                  // Optional: You could add a subtle background color to the selected tab's box
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                ),
+                // --- End Indicator Customization ---
                 tabs: _tabs, // Use the static list of Tabs
               ),
             ),
@@ -501,10 +713,14 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
                 List<TravelPeriod> parsedTravelPeriods = parseBestTimeToTravel(
                   details.bestTimeToTravel,
                 );
-                return CityDetailsOverview(
-                  details: details,
-                  parsedTravelPeriods: parsedTravelPeriods,
-                  rawBestTimeText: details.bestTimeToTravel,
+                return Column(
+                  children: [
+                    CityDetailsOverview(
+                      details: details,
+                      parsedTravelPeriods: parsedTravelPeriods,
+                      rawBestTimeText: details.bestTimeToTravel,
+                    ),
+                  ],
                 );
               },
               loading: () => _buildLoadingIndicator(),
@@ -519,7 +735,7 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
               data:
                   (details) => HourlyForecastChart(
                     weatherForecast: details.weatherForecast,
-                    
+
                     locationKey: details.id.toString(),
                     lastUpdated: details.weatherLastUpdated,
                   ),
@@ -569,8 +785,9 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
         vertical: 24.0,
       ), // Add padding around each section
       sliver: SliverToBoxAdapter(
-         child: Container( // <<< WRAP child in a Container (or KeyedSubtree)
-          key: key,     // <<< ATTACH KEY HERE (to the RenderBox)
+        child: Container(
+          // <<< WRAP child in a Container (or KeyedSubtree)
+          key: key, // <<< ATTACH KEY HERE (to the RenderBox)
           child: child,
         ),
       ),
@@ -608,5 +825,10 @@ class CityDetailsOverview extends StatelessWidget {
     required this.rawBestTimeText,
   }) : super(key: key);
   @override
-  Widget build(BuildContext context) => Text('\n${details.description ?? ""}');
+  Widget build(BuildContext context) => Column(
+    children: [
+      Text('\n${details.description ?? ""}'),
+      // buildBestTimeSection(context, parsedTravelPeriods, rawBestTimeText)
+    ],
+  );
 }

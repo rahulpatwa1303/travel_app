@@ -132,3 +132,70 @@ async def get_visit_history(db: AsyncSession, *, user_id: int, days: int = 30, s
     # Need unique() because joinedload can cause duplicates if multiple history entries point to same place
     history_entries = result.scalars().unique().all()
     return history_entries
+
+async def add_city_favorite(db: AsyncSession, *, user_id: int, city_id: int) -> Optional[models.UserFavoriteCity]:
+    """Adds a city to user's favorites. Returns association obj or None if city DNE."""
+    city = await db.get(models.City, city_id)
+    if not city:
+        logger.warning(f"Attempt to favorite non-existent city {city_id} by user {user_id}")
+        return None
+
+    stmt_check = select(models.UserFavoriteCity).where(
+        models.UserFavoriteCity.user_id == user_id,
+        models.UserFavoriteCity.city_id == city_id
+    )
+    existing = await db.execute(stmt_check)
+    if existing.scalars().first():
+        logger.info(f"City {city_id} already favorited by user {user_id}")
+        return existing.scalars().first()
+
+    db_fav_city = models.UserFavoriteCity(user_id=user_id, city_id=city_id)
+    db.add(db_fav_city)
+    logger.info(f"Added city {city_id} to favorites for user {user_id}")
+    return db_fav_city
+
+async def remove_city_favorite(db: AsyncSession, *, user_id: int, city_id: int) -> bool:
+    """Removes a city from user's favorites. Returns True if removed."""
+    city = await db.get(models.City, city_id)
+    if not city:
+        logger.warning(f"Attempt to unfavorite non-existent city {city_id} by user {user_id}")
+        return False
+
+    stmt = delete(models.UserFavoriteCity).where(
+        models.UserFavoriteCity.user_id == user_id,
+        models.UserFavoriteCity.city_id == city_id
+    ).returning(models.UserFavoriteCity.user_id)
+
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none() is not None:
+        logger.info(f"Removed city {city_id} from favorites for user {user_id}")
+        return True
+    else:
+        logger.warning(f"Attempt to unfavorite city {city_id} not favorited by user {user_id}")
+        return False
+
+async def get_favorite_cities(db: AsyncSession, *, user_id: int, skip: int = 0, limit: int = 100) -> List[models.City]:
+    """Gets the list of cities favorited by a user."""
+    stmt = (
+        select(models.City)
+        .join(models.UserFavoriteCity, models.City.id == models.UserFavoriteCity.city_id)
+        .where(models.UserFavoriteCity.user_id == user_id)
+        .order_by(models.UserFavoriteCity.created_at.desc())
+        # Eager load necessary related data for the CitySchema response
+        .options(
+            selectinload(models.City.country),
+            selectinload(models.City.images).load_only(models.CityImage.image_url)
+            )
+        .offset(skip)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    cities = result.scalars().unique().all() # Use unique() because of potential joins
+    return cities
+
+async def get_favorite_city_ids(db: AsyncSession, *, user_id: int) -> List[int]:
+    """Gets only the IDs of cities favorited by a user."""
+    stmt = select(models.UserFavoriteCity.city_id).where(models.UserFavoriteCity.user_id == user_id)
+    result = await db.execute(stmt)
+    ids = result.scalars().all()
+    return ids

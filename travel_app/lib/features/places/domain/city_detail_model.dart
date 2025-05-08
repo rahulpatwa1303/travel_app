@@ -153,8 +153,12 @@ class WeatherForecast with _$WeatherForecast {
     double? longitude,
     @JsonKey(name: 'generationtime_ms') // Adjusted based on sample JSON key format
     double? generationtimeMs,
-    @JsonKey(name: 'utc_offset_seconds') // Adjusted based on sample JSON key format
+
+    // --- CORRECTED JsonKey name ---
+    @JsonKey(name: 'utcOffsetSeconds') // Use camelCase to match JSON
     int? utcOffsetSeconds,
+    // --- End Correction ---
+
     String? timezone,
     @JsonKey(name: 'timezone_abbreviation') // Adjusted based on sample JSON key format
     String? timezoneAbbreviation,

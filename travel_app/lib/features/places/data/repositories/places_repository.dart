@@ -240,6 +240,131 @@ class PlacesRepository {
       );
     }
   }
+
+  // --- End Dislike a Place ---
+  Future<Set<int>> fetchLikedCityIds() async {
+    try {
+      print("Fetching liked city IDs: GET /api/v1/cities/me/favorite-cities/ids");
+      final response = await _dio.get('/api/v1/cities/me/favorite-cities/ids');
+
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data is List) {
+          final ids = List<int>.from(
+            response.data
+                .map((item) {
+                  if (item is int) return item;
+                  if (item is String) return int.tryParse(item);
+                  return null;
+                })
+                .where((id) => id != null)
+                .cast<int>(),
+          );
+          print("Successfully fetched liked city IDs: $ids");
+          return ids.toSet();
+        } else if (response.data is Map<String, dynamic> &&
+            response.data['ids'] is List) {
+          final ids = List<int>.from(
+            response.data['ids']
+                .map((item) {
+                  if (item is int) return item;
+                  if (item is String) return int.tryParse(item);
+                  return null;
+                })
+                .where((id) => id != null)
+                .cast<int>(),
+          );
+          print("Successfully fetched liked city IDs (from 'ids' key): $ids");
+          return ids.toSet();
+        } else {
+          print("Error fetching liked city IDs: Unexpected response data format.");
+          throw Exception("Unexpected response data format for liked city IDs.");
+        }
+      } else {
+        print("Error fetching liked city IDs: Status ${response.statusCode}");
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          error: "Failed to fetch liked city IDs (${response.statusCode})",
+        );
+      }
+    } on DioException catch (e) {
+      print("DioException fetching liked city IDs: ${e.message}");
+      // Consider more specific error handling or remapping here
+      if (e.response?.statusCode == 401) {
+        // Handle unauthorized specifically if needed
+        print("Unauthorized to fetch liked cities. User might not be logged in.");
+      }
+      rethrow;
+    } catch (e) {
+      print("Unknown error fetching liked city IDs: $e");
+      throw Exception("An unexpected error occurred fetching liked city IDs: $e");
+    }
+  }
+  
+  // --- NEW: Like a Place ---
+  Future<void> likeCity(int placeId) async {
+    try {
+      print("Liking place: POST /api/v1/users/me/favorites-cities/$placeId");
+      final response = await _dio.post(
+        '/api/v1/cities/me/favorite-cities/$placeId',
+      );
+
+      // Check for success status code (e.g., 200, 201, 204 No Content)
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        print("Successfully liked place $placeId");
+        // No specific data needed from response based on curl example
+        return;
+      } else {
+        print("Error liking place $placeId: Status ${response.statusCode}");
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          error: "Failed to like place $placeId (${response.statusCode})",
+        );
+      }
+    } on DioException catch (e) {
+      print("DioException liking place $placeId: ${e.message}");
+      rethrow; // Let the notifier handle UI feedback
+    } catch (e) {
+      print("Unknown error liking place $placeId: $e");
+      throw Exception("An unexpected error occurred liking place $placeId: $e");
+    }
+  }
+  // --- End Like a Place ---
+
+  // --- NEW: Dislike a Place ---
+  Future<void> dislikeCity(int placeId) async {
+    try {
+      print("Disliking place: DELETE /api/v1/users/me/favorites/$placeId");
+      final response = await _dio.delete('/api/v1/users/me/favorites/$placeId');
+
+      // Check for success status code (e.g., 200 OK, 204 No Content)
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        print("Successfully disliked place $placeId");
+        // No specific data needed from response based on curl example
+        return;
+      } else {
+        print("Error disliking place $placeId: Status ${response.statusCode}");
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          error: "Failed to dislike place $placeId (${response.statusCode})",
+        );
+      }
+    } on DioException catch (e) {
+      print("DioException disliking place $placeId: ${e.message}");
+      rethrow; // Let the notifier handle UI feedback
+    } catch (e) {
+      print("Unknown error disliking place $placeId: $e");
+      throw Exception(
+        "An unexpected error occurred disliking place $placeId: $e",
+      );
+    }
+  }
   // --- End Dislike a Place ---
 
   Future<List<PlacesCategory>> getCategories() async {

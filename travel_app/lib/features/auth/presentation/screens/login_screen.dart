@@ -23,16 +23,17 @@ class LoginScreen extends ConsumerWidget {
         print("LoginScreen detected authenticated state.");
       }
       if (previous == AuthState.unknown && next == AuthState.unauthenticated) {
-         // Just finished initial check, ready to login
-          print("LoginScreen detected initial unauthenticated state.");
+        // Just finished initial check, ready to login
+        print("LoginScreen detected initial unauthenticated state.");
       }
     });
 
-
     // --- Placeholder for testing ---
     // TODO: Remove these default values in production
-    _emailController.text = 'curluser@example.com'; // Replace with actual test user
-    _passwordController.text = 'curlpassword'; // Replace with actual test password
+    _emailController.text =
+        'curluser@example.com'; // Replace with actual test user
+    _passwordController.text =
+        'curlpassword'; // Replace with actual test password
     // --- End Placeholder ---
 
     return Scaffold(
@@ -50,7 +51,9 @@ class LoginScreen extends ConsumerWidget {
                   decoration: const InputDecoration(labelText: 'Email'),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty || !value.contains('@')) {
+                    if (value == null ||
+                        value.isEmpty ||
+                        !value.contains('@')) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -61,7 +64,7 @@ class LoginScreen extends ConsumerWidget {
                   controller: _passwordController,
                   decoration: const InputDecoration(labelText: 'Password'),
                   obscureText: true,
-                   validator: (value) {
+                  validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
                     }
@@ -72,27 +75,32 @@ class LoginScreen extends ConsumerWidget {
                 isLoading
                     ? const CircularProgressIndicator()
                     : ElevatedButton(
-                        onPressed: () async {
-                          if (_formKey.currentState!.validate()) {
-                            ref.read(loginLoadingProvider.notifier).state = true;
-                            final success = await ref
-                                .read(authControllerProvider.notifier)
-                                .login(
-                                  _emailController.text.trim(),
-                                  _passwordController.text.trim(),
-                                );
-                             ref.read(loginLoadingProvider.notifier).state = false;
+                      onPressed: () async {
+                        if (_formKey.currentState!.validate()) {
+                          ref.read(loginLoadingProvider.notifier).state = true;
+                          final success = await ref
+                              .read(authControllerProvider.notifier)
+                              .login(
+                                _emailController.text.trim(),
+                                _passwordController.text.trim(),
+                              );
+                          if (!context.mounted) return;
+                          ref.read(loginLoadingProvider.notifier).state = false;
 
-                             if (!success && context.mounted) {
-                               ScaffoldMessenger.of(context).showSnackBar(
-                                 const SnackBar(content: Text('Login Failed. Please check credentials.')),
-                               );
-                             }
-                             // Navigation happens via router listening to authControllerProvider
+                          if (!success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Login Failed. Please check credentials.',
+                                ),
+                              ),
+                            );
                           }
-                        },
-                        child: const Text('Login'),
-                      ),
+                          // Navigation happens via router listening to authControllerProvider
+                        }
+                      },
+                      child: const Text('Login'),
+                    ),
               ],
             ),
           ),

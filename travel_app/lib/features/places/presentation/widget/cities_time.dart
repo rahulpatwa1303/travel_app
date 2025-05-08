@@ -4,174 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:travel_app/core/networking/lat_lng_model.dart';
-import 'package:travel_app/features/places/data/repositories/cities_time.dart';
 // Import your models
 import 'package:travel_app/features/places/domain/city_detail_model.dart';
-// Import helpers and providers
-import 'package:travel_app/features/places/presentation/controllers/helper.dart';
 import 'package:travel_app/features/places/presentation/providers/places_provider.dart';
-import 'package:travel_app/features/places/presentation/widget/best_time_to_travel.dart';
 import 'package:travel_app/widget/sun_position_arc.dart';
-
-// Widget buildCitySunDetailsContent(
-//   BuildContext context,
-//   CityDetail details,
-//   List<TravelPeriod> parsedTravelPeriods,
-//   String? rawBestTimeText,
-// ) {
-//   Widget bestTimeSection = buildBestTimeSection(
-//     context,
-//     parsedTravelPeriods,
-//     rawBestTimeText,
-//   );
-
-//   // --- Extract Sunrise/Sunset Times (Example) ---
-//   // IMPORTANT: Your DailyData time strings might need parsing!
-//   // Assuming daily.time[0] is today, daily.sunrise[0] and daily.sunset[0] are ISO strings
-//   DateTime? sunriseTime;
-//   DateTime? sunsetTime;
-//   final dailyData = details.weatherForecast?.daily;
-//   if (dailyData?.sunrise != null && dailyData!.sunrise!.isNotEmpty) {
-//     sunriseTime = DateTime.tryParse(dailyData.sunrise!.first);
-//   }
-//   if (dailyData?.sunset != null && dailyData!.sunset!.isNotEmpty) {
-//     sunsetTime = DateTime.tryParse(dailyData.sunset!.first);
-//   }
-//   // --- End Time Extraction ---
-
-//   // Get current time (can be passed in or fetched)
-//   final DateTime now = DateTime.now(); // Use actual current time
-
-//   final lat = details.weatherForecast?.latitude;
-//   final lng = details.weatherForecast?.longitude;
-
-//   if (lat == null || lng == null) {
-//     return Text('Location not available');
-//   }
-//   final DateFormat localTimeFormatter = DateFormat.jm();
-//   final DateFormat dateTimeParser = DateFormat(
-//     "yyyy-MM-dd HH:mm",
-//   ); // EXAMPLE PARSER - ADJUST TO YOUR API's RETURN FORMAT
-//   late final Future currentDateTime = getCurrentTimeFromLatLng(lat, lng);
-
-//   return FutureBuilder(
-//     future: currentDateTime,
-//     builder: (context, snapshot) {
-//       if(snapshot.hasData){
-
-//       }
-//       else if (snapshot.connectionState == ConnectionState.waiting) {
-//         return const CircularProgressIndicator();
-//       } else if (snapshot.hasError) {
-//         return Text('Error: ${snapshot.error}');
-//       } else if (!snapshot.hasData) {
-//         return const Text('No data received');
-//       }
-
-//       final String localTimeString = snapshot.data!;
-//       DateTime? localTimeDateTime; // Keep it nullable initially
-//       String displayLocalTime = "N/A";
-
-//       try {
-//         // *** IMPORTANT: ADJUST PARSING FORMAT HERE ***
-//         // Example 1: If API returns ISO 8601 string (e.g., "2023-10-27T15:30:00Z" or "2023-10-27T10:30:00-05:00")
-//         localTimeDateTime = DateTime.parse(localTimeString).toLocal();
-
-//         // Example 2: If API returns "YYYY-MM-DD HH:MM" (adjust format string)
-//         // localTimeDateTime = dateTimeParser.parse(localTimeString, true).toLocal();
-
-//         // If parsing successful, format for display
-//         displayLocalTime = localTimeFormatter.format(localTimeDateTime);
-//       } catch (e) {
-//         print(
-//           "Error parsing fetched local time string '$localTimeString': $e",
-//         );
-//         displayLocalTime = localTimeString; // Show raw string as fallback
-//       }
-//       // --- End Time Processing ---
-
-//       String sunMessage = "";
-//       if (localTimeDateTime != null &&
-//           sunriseTime != null &&
-//           sunsetTime != null) {
-//         final Duration timeUntilSunrise = sunriseTime.difference(
-//           localTimeDateTime,
-//         );
-//         final Duration timeUntilSunset = sunsetTime.difference(
-//           localTimeDateTime,
-//         );
-
-//         // Check if sunrise is upcoming (within next 90 mins)
-//         if (timeUntilSunrise > Duration.zero &&
-//             timeUntilSunrise <= const Duration(minutes: 90)) {
-//           sunMessage = "Sunrise soon! Don't miss it.";
-//         }
-//         // Check if sunset is upcoming (within next 90 mins)
-//         else if (timeUntilSunset > Duration.zero &&
-//             timeUntilSunset <= const Duration(minutes: 90)) {
-//           sunMessage = "Sunset approaching! Find a good spot.";
-//         }
-//       }
-
-//       return Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           Padding(
-//             padding: const EdgeInsets.symmetric(
-//               horizontal: 12,
-//               vertical: 10,
-//             ), // Space below time text
-//             child: Text(
-//               "Current time is $displayLocalTime",
-//               style: Theme.of(
-//                 context,
-//               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-//             ),
-//           ),
-//           if (sunMessage.isNotEmpty)
-//             Padding(
-//               padding: const EdgeInsets.only(
-//                 right: 12,
-//                 left: 12,
-//                 bottom: 10,
-//               ), // Space below message
-//               child: Text(
-//                 sunMessage,
-//                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-//                   color: Theme.of(context).primaryColor,
-//                   fontStyle: FontStyle.italic,
-//                 ),
-//               ),
-//             ),
-//           // --- Add Sun Arc Widget ---
-//           if (sunriseTime != null && sunsetTime != null)
-//             Center(
-//               // Center the Arc widget horizontally
-//               child: SunPositionArc(
-//                 sunrise: sunriseTime,
-//                 sunset: sunsetTime,
-//                 currentTime: localTimeDateTime,
-//                 size: 180, // Adjust size
-//                 arcColor: Colors.orange.shade300,
-//                 sunColor: Colors.yellow.shade700,
-//                 timeColor: Colors.black54,
-//                 strokeWidth: 2,
-//                 sunRadius: 8,
-//               ),
-//             )
-//           else
-//             const Text(
-//               "Sunrise/sunset data unavailable.",
-//               style: TextStyle(fontSize: 12, color: Colors.grey),
-//             ),
-
-//           // --- End Sun Arc ---
-//           const SizedBox(height: 24), // Space after sun arc
-//         ],
-//       );
-//     },
-//   );
-// }
 
 // --- UPDATED Helper for Sun Details Section ---
 Widget buildCitySunDetailsContent(
@@ -227,26 +63,106 @@ Widget buildCitySunDetailsContent(
 
       // Calculate sun message
       String sunMessage = "";
-      if (localTimeDateTime != null &&
-          sunriseTime != null &&
-          sunsetTime != null) {
-        final Duration timeUntilSunrise = sunriseTime.difference(
-          localTimeDateTime,
-        );
-        final Duration timeUntilSunset = sunsetTime.difference(
-          localTimeDateTime,
-        );
 
-        // Check if sunrise is upcoming (within next 90 mins)
-        if (timeUntilSunrise > Duration.zero &&
-            timeUntilSunrise <= const Duration(minutes: 90)) {
-          sunMessage = "Sunrise soon! Don't miss it.";
+      final dailyData = details.weatherForecast?.daily;
+      final int? timeZoneOffsetSeconds =
+          details?.weatherForecast?.utcOffsetSeconds;
+
+
+      // Check if we have all necessary data
+      if (dailyData?.sunrise?.isNotEmpty == true &&
+          dailyData?.sunset?.isNotEmpty == true &&
+          timeZoneOffsetSeconds != null) {
+        String sunriseStr = dailyData!.sunrise!.first;
+        String sunsetStr = dailyData!.sunset!.first;
+
+        DateTime? sunriseTimeUtc;
+        DateTime? sunsetTimeUtc;
+        DateTime nowUtc = DateTime.now().toUtc(); // Get current time in UTC
+
+        try {
+          // Parse the date/time part (ignoring any potential offset IN the string, as ours don't have it)
+          // DateTime.parse assumes local time if no offset is present in the string.
+          DateTime parsedSunriseLocal = DateTime.parse(sunriseStr);
+          DateTime parsedSunsetLocal = DateTime.parse(sunsetStr);
+
+          // --- CRITICAL: Convert parsed times to UTC using the API's offset ---
+          // We assume the parsed time represents the wall-clock time *at the location*.
+          // To get the equivalent UTC instant, we SUBTRACT the location's offset from UTC.
+          sunriseTimeUtc = DateTime.utc(
+            parsedSunriseLocal.year,
+            parsedSunriseLocal.month,
+            parsedSunriseLocal.day,
+            parsedSunriseLocal.hour,
+            parsedSunriseLocal.minute,
+            parsedSunriseLocal.second,
+            parsedSunriseLocal.millisecond, // include milliseconds if needed
+          ).subtract(Duration(seconds: timeZoneOffsetSeconds));
+
+          sunsetTimeUtc = DateTime.utc(
+            parsedSunsetLocal.year,
+            parsedSunsetLocal.month,
+            parsedSunsetLocal.day,
+            parsedSunsetLocal.hour,
+            parsedSunsetLocal.minute,
+            parsedSunsetLocal.second,
+            parsedSunsetLocal.millisecond, // include milliseconds if needed
+          ).subtract(Duration(seconds: timeZoneOffsetSeconds));
+          // --- End UTC Conversion ---
+
+          if (sunriseTimeUtc != null && sunsetTimeUtc != null) {
+            // Perform comparisons using UTC times
+            final Duration timeUntilSunrise = sunriseTimeUtc.difference(nowUtc);
+            final Duration timeUntilSunset = sunsetTimeUtc.difference(nowUtc);
+
+            // Check if sunrise is upcoming (within next 90 mins AND hasn't passed)
+            if (timeUntilSunrise.isNegative ==
+                    false && // Check if it's zero or positive (not past)
+                timeUntilSunrise <= const Duration(minutes: 90)) {
+              final mins = timeUntilSunrise.inMinutes;
+              if (mins <= 1) {
+                sunMessage =
+                    "Sunrise happening now. Hope you have a nice view!";
+              } else {
+                // Subtle message:
+                sunMessage =
+                    "Heads up: Sunrise in $mins minutes. Consider finding a nice spot to watch.";
+              }
+            }
+            // Check if sunset is upcoming (within next 90 mins AND hasn't passed)
+            else if (timeUntilSunset.isNegative ==
+                    false && // Check if it's zero or positive (not past)
+                timeUntilSunset <= const Duration(minutes: 90)) {
+              final mins = timeUntilSunset.inMinutes;
+              if (mins <= 1) {
+                sunMessage = "Sunset happening now. Enjoy the colours!";
+              } else {
+                // Subtle message:
+                sunMessage =
+                    "Catch the sunset in $mins minutes. Find a clear view if you can.";
+              }
+            }
+            // Optional: Log if it's daytime or nighttime for context
+            else if (nowUtc.isAfter(sunriseTimeUtc) &&
+                nowUtc.isBefore(sunsetTimeUtc)) {
+              print("Debug: Currently daytime.");
+            } else {
+              print("Debug: Currently nighttime, or outside check window.");
+            }
+          } else {
+            print(
+              "Debug: Failed to establish valid UTC sunrise/sunset DateTime objects.",
+            );
+          }
+        } catch (e, stackTrace) {
+          print('Error parsing or processing sunrise/sunset times: $e');
+          print(stackTrace);
+          // Optionally set an error message: sunMessage = "Error getting sun times";
         }
-        // Check if sunset is upcoming (within next 90 mins)
-        else if (timeUntilSunset > Duration.zero &&
-            timeUntilSunset <= const Duration(minutes: 90)) {
-          sunMessage = "Sunset approaching! Find a good spot.";
-        }
+      } else {
+        print(
+          "Debug: Missing required data for sun time calculation (daily data, sunrise/sunset lists, or UTC offset).",
+        );
       }
 
       // Calculate refresh info
@@ -273,19 +189,20 @@ Widget buildCitySunDetailsContent(
                   child: Text("Current time is $displayLocalTime" /* Style */),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  isRefreshingSoon
-                      ? "(Refreshing soon...)"
-                      : "(Refreshes ~${expiryFormatted})" /* Style */,
-                ),
+                //don't need to show the user this
+                // Text(
+                //   isRefreshingSoon
+                //       ? "(Refreshing soon...)"
+                //       : "(Refreshes ~${expiryFormatted})" /* Style */,
+                // ),
               ],
             ),
             const SizedBox(height: 8),
-            if (sunMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(right: 12, left: 12, bottom: 10),
-              ),
-        
+            Padding(
+              padding: const EdgeInsets.only(right: 12, left: 12, bottom: 10),
+              child: Text(sunMessage,style: TextStyle(fontStyle: FontStyle.italic,color: Colors.blueAccent),),
+            ),
+
             // Sun Arc Widget
             if (sunriseTime != null &&
                 sunsetTime != null &&

@@ -22,12 +22,15 @@ class PaginatedTopPlacesNotifier extends StateNotifier<PaginatedPlacesState> {
     // Initial state
     fetchInitialPlaces(); // Fetch first page on creation
   }
+  bool _disposed = false;
 
   @override
   void dispose() {
+      _disposed = true;
     _imageUpdateTimer?.cancel();
     super.dispose();
   }
+
 
   // --- Modified Initial Fetch ---
   Future<void> fetchInitialData() async {
@@ -90,6 +93,7 @@ class PaginatedTopPlacesNotifier extends StateNotifier<PaginatedPlacesState> {
         offset: 0, // Always start at offset 0
         limit: _limit,
       );
+        if (_disposed) return;
 
       state = state.copyWith(
         places: response.places,

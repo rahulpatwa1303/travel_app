@@ -7,7 +7,6 @@ import 'package:travel_app/features/places/domain/city_detail_model.dart';
 // Import helpers and providers
 import 'package:travel_app/features/places/presentation/controllers/helper.dart';
 import 'package:travel_app/features/places/presentation/widget/best_time_to_travel.dart';
-import 'package:travel_app/features/places/presentation/widget/hourly_forecast_chart.dart';
 
 Widget buildCityDetailsContent(
   BuildContext context,

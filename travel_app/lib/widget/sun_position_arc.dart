@@ -170,7 +170,6 @@ class _SunPositionArcState extends State<SunPositionArc> {
 
      if (!isSunCurrentlyVisible) return; // Do nothing if sun isn't "up"
 
-     print("Sun Tapped! Toggling tooltip. Current state: $_showTimeTooltip"); // Debugging
      setState(() {
        _showTimeTooltip = !_showTimeTooltip;
      });
