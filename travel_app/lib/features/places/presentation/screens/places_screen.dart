@@ -552,7 +552,7 @@ class PlacesScreen extends ConsumerWidget {
                   CrossAxisAlignment.start, // Align sections to the start
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   child: CityAutocompleteSearch(
                     hintText: 'Enter city name...',
                     onSuggestionSelected: (suggestion) {
@@ -561,10 +561,6 @@ class PlacesScreen extends ConsumerWidget {
                         ':placeId',
                         suggestion.id.toString(),
                       );
-                      // detailPath should now be '/place/199' (if place.id is 199)
-                      print(
-                        'Navigating to: $detailPath',
-                      ); // Add this print statement
                       context.push(detailPath, extra: suggestion);
                       print(
                         'Selected city: ${suggestion.name} (ID: ${suggestion.id})',

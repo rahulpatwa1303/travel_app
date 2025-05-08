@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:travel_app/features/places/data/repositories/places_repository.dart';
 // Import your models
 import 'package:travel_app/features/places/domain/city_detail_model.dart';
 import 'package:travel_app/features/places/domain/place_by_city_model.dart'; // Use PlaceByCity
@@ -11,9 +10,9 @@ import 'package:travel_app/features/places/domain/top_place_model.dart'; // For 
 import 'package:travel_app/features/places/presentation/controllers/helper.dart';
 import 'package:travel_app/features/places/presentation/providers/liked_cities_notifier.dart';
 import 'package:travel_app/features/places/presentation/providers/places_provider.dart';
-import 'package:travel_app/features/places/presentation/widget/best_time_to_travel.dart';
 import 'package:travel_app/features/places/presentation/widget/cities_places.dart';
 import 'package:travel_app/features/places/presentation/widget/cities_time.dart';
+import 'package:travel_app/features/places/presentation/widget/city_map_section.dart';
 import 'package:travel_app/features/places/presentation/widget/hourly_forecast_chart.dart';
 import 'package:travel_app/widget/floating_heart_button.dart';
 
@@ -21,132 +20,6 @@ import 'package:travel_app/widget/floating_heart_button.dart';
 // Assume placeLikeStateProvider exists
 final placeLikeStateProvider = StateProvider<Map<int, bool>>((ref) => {});
 
-// Define TravelPeriod class if not imported
-// class TravelPeriod {
-//   final String when, why;
-//   const TravelPeriod({required this.when, required this.why});
-// }
-
-// Assume parseBestTimeToTravel function is available
-// List<TravelPeriod> parseBestTimeToTravel(String? rawText) {
-//   // 1. Handle null or empty input
-//   if (rawText == null || rawText.trim().isEmpty) {
-//     return [];
-//   }
-
-//   // 2. Basic cleaning: Remove leading/trailing whitespace and potential quote pairs
-//   String cleanedText = rawText.trim();
-//   if (cleanedText.startsWith("'") && cleanedText.endsWith("'")) {
-//     cleanedText = cleanedText.substring(1, cleanedText.length - 1);
-//   }
-//   // Also handle potential trailing comma from copy-paste errors like `...',`
-//    if (cleanedText.endsWith(',')) {
-//       cleanedText = cleanedText.substring(0, cleanedText.length - 1);
-//    }
-//   cleanedText = cleanedText.trim(); // Trim again after potential modifications
-
-//   // 3. Split into potential sentences or distinct period descriptions using '.' as a primary separator
-//   // Filter out empty strings that might result from splitting (e.g., double periods)
-//   List<String> potentialPeriods = cleanedText
-//       .split('.')
-//       .map((s) => s.trim()) // Trim each potential part
-//       .where((s) => s.isNotEmpty) // Keep only non-empty parts
-//       .toList();
-
-//   List<TravelPeriod> parsedPeriods = [];
-
-//   // 4. Process each potential period description
-//   for (String part in potentialPeriods) {
-//     // 5. Look for the colon ':' which often separates 'when' from 'why'
-//     int colonIndex = part.indexOf(':');
-
-//     if (colonIndex != -1) {
-//       // Found a colon, assume 'when: why' structure
-//       String whenPart = part.substring(0, colonIndex).trim();
-//       String whyPart = part.substring(colonIndex + 1).trim();
-
-//       // Basic validation: only add if both parts seem to have content
-//       if (whenPart.isNotEmpty && whyPart.isNotEmpty) {
-//         // Create the TravelPeriod object (ensure this uses the class from helper.dart)
-//         parsedPeriods.add(TravelPeriod(when: whenPart, why: whyPart));
-//       }
-//       // Optional: Handle cases where only one part is present?
-//       // else { print("Warning: Found colon but missing when/why in part: '$part'"); }
-
-//     } else {
-//       // 6. No colon found in this part.
-//       // It *might* be a general statement or formatted differently.
-//       // For simplicity in this version, we'll only capture parts with a clear colon separator.
-//       // More complex logic (e.g., Regex for "Month to Month") could be added here if needed.
-//       print("Info: Skipping part without colon separator: '$part'");
-//     }
-//   }
-
-//   // 7. Return the list of successfully parsed periods
-//   return parsedPeriods;
-// }
-
-// --- Delegate for Sticky TabBar ---
-// class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-//   const _SliverTabBarDelegate(this.tabBar);
-//   final TabBar tabBar;
-//   @override
-//   double get minExtent => tabBar.preferredSize.height;
-//   @override
-//   double get maxExtent => tabBar.preferredSize.height;
-//   @override
-//   Widget build(
-//     BuildContext context,
-//     double shrinkOffset,
-//     bool overlapsContent,
-//   ) {
-//     return Container(
-//       color: Theme.of(context).scaffoldBackgroundColor,
-//       child: tabBar,
-//     );
-//   }
-
-//   @override
-//   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) =>
-//       tabBar != oldDelegate.tabBar ||
-//       tabBar.controller != oldDelegate.tabBar.controller;
-// }
-
-// --- Delegate for the Sticky TabBar ---
-// class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-//   _SliverTabBarDelegate(this.tabBar, {required this.backgroundColor});
-
-//   final TabBar tabBar;
-//   final Color backgroundColor;
-
-//   double get _tabBarHeight {
-//     double height = tabBar.preferredSize.height;
-//     if (tabBar.padding is EdgeInsets) {
-//       height += (tabBar.padding as EdgeInsets).vertical;
-//     }
-//     return height;
-//   }
-
-//   @override
-//   double get minExtent => _tabBarHeight;
-//   @override
-//   double get maxExtent => _tabBarHeight;
-
-//   @override
-//   Widget build(
-//       BuildContext context, double shrinkOffset, bool overlapsContent) {
-//     return Container(
-//       color: backgroundColor, // Apply background color to the entire persistent header area
-//       child: tabBar,
-//     );
-//   }
-
-//   @override
-//   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
-//     return tabBar != oldDelegate.tabBar ||
-//            backgroundColor != oldDelegate.backgroundColor;
-//   }
-// }
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverTabBarDelegate({
     required this.tabBar,
@@ -233,12 +106,13 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
     Tab(text: 'Forecast'),
     Tab(text: 'Sun Times'),
     Tab(text: 'Places'),
+    Tab(text: 'Map'),
   ];
   // --- End TabController State ---
 
   // --- State for Scroll-Linked Tabs ---
   final List<GlobalKey> _sectionKeys = List.generate(
-    4,
+    5,
     (_) => GlobalKey(),
   ); // One key per section
   // Map to store calculated offsets (index -> offset) - Optional caching
@@ -767,6 +641,75 @@ class _CityDetailsScreenState extends ConsumerState<CityDetailsScreen>
             //    loading: () => _buildLoadingIndicator(),
             //    error: (e, s) => _buildErrorWidget("Places", e),
             // ),
+          ),
+
+          // Inside _CityDetailsScreenState's build method, for the Map section:
+          _buildSectionSliver(
+            context: context,
+            key: _sectionKeys[4], // Key for Map section
+            child: cityDetailsAsync.when(
+              data: (details) {
+                double latToUse = 0.0;
+                double lonToUse = 0.0;
+                if (details.weatherForecast == null) {
+                  return SizedBox();
+                }
+                // --- Primary Source: CityDetail's direct coordinates ---
+                if (details.weatherForecast!.latitude != null &&
+                    details.weatherForecast!.longitude != null) {
+                  // Ensure they are not the "invalid" 0.0, 0.0 unless that's genuinely the coordinate
+                  if (details.weatherForecast!.latitude != 0.0 ||
+                      details.weatherForecast!.longitude != 0.0) {
+                    latToUse = details.weatherForecast!.latitude!;
+                    lonToUse = details.weatherForecast!.longitude!;
+                  } else {
+                    // If API explicitly sends 0.0, 0.0, and that's not an error/missing indicator
+                    // then use them. Otherwise, it will fall through to the print below.
+                    // For now, let's assume 0.0,0.0 means missing for the purpose of this example.
+                    // So if details.latitude IS 0.0 and details.longitude IS 0.0, they will stay 0.0
+                    // and the CityMapSection will show "not available".
+                    // If 0,0 is a valid coordinate your API might send, this logic might need adjustment.
+                    latToUse =
+                        details.weatherForecast!.latitude!; // Potentially 0.0
+                    lonToUse =
+                        details.weatherForecast!.longitude!; // Potentially 0.0
+                  }
+                }
+                // --- Optional Fallback: If primary coordinates are missing, try weatherForecast (if it's even relevant for city map) ---
+                // Generally, for a *city* map, weatherForecast coordinates might not be the right source.
+                // But if it's your only other option and you decide to use it:
+                /*
+      else if (details.weatherForecast != null && // <<< CHECK weatherForecast IS NOT NULL FIRST
+               details.weatherForecast!.latitude != null &&
+               details.weatherForecast!.longitude != null) {
+        
+        // Also ensure these are not 0.0,0.0 if that means invalid
+        if (details.weatherForecast!.latitude != 0.0 || details.weatherForecast!.longitude != 0.0) {
+          print("Developer Log: Using coordinates from weatherForecast for ${details.name}");
+          latToUse = details.weatherForecast!.latitude!;
+          lonToUse = details.weatherForecast!.longitude!;
+        }
+      }
+      */
+
+                // If after all checks, latToUse and lonToUse are still 0.0 (our default for "missing")
+                if (latToUse == 0.0 &&
+                    lonToUse == 0.0 &&
+                    details.name.isNotEmpty) {
+                  print(
+                    "Developer Log: No valid primary coordinates found for ${details.name}. CityMapSection will show 'data not available'.",
+                  );
+                }
+
+                return CityMapSection(
+                  latitude: latToUse,
+                  longitude: lonToUse,
+                  cityName: details.name,
+                );
+              },
+              loading: () => _buildLoadingIndicator(),
+              error: (e, s) => _buildErrorWidget("Map", e),
+            ),
           ),
         ],
       ),

@@ -257,7 +257,8 @@ class _CarouselViewWidgetState extends State<CarouselViewWidget> {
   Widget _buildLoadingIndicator() {
     return Center(
       child: Container(
-        width: _itemBaseWidth * 0.5, // Smaller than a full card
+        width: 50, // Smaller than a full card
+        height: 25,
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         child: const CircularProgressIndicator(),
       ),
