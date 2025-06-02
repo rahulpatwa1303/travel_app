@@ -1,188 +1,316 @@
-// lib/features/cities/presentation/widgets/city_autocomplete_search.dart
+// lib/features/search/presentation/widgets/city_autocomplete_search.dart (example path)
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/city_suggestion_model.dart'; // Adjust if necessary
-import '../providers/city_search_notifier.dart'; // Adjust if necessary
+import 'package:travel_app/core/enums/search_type.dart';
+import 'package:travel_app/features/places/domain/city_suggestion_model.dart';
+import 'package:travel_app/features/places/domain/place_suggestion_model.dart';
+import 'package:travel_app/features/places/presentation/providers/city_search_notifier.dart';
 
-class CityAutocompleteSearch extends ConsumerStatefulWidget {
-  final String? hintText;
-  final void Function(CitySearchSuggestion suggestion)? onSuggestionSelected;
-  final TextEditingController? controller;
+// Import your models and providers
+// City
 
-  const CityAutocompleteSearch({
+
+// SearchType enum (defined above or imported)
+// enum SearchType { city, place }
+// extension SearchTypeExtension on SearchType { /* ... */ }
+
+
+class UnifiedAutocompleteSearch extends ConsumerStatefulWidget {
+  final String? initialHintText;
+  final void Function(dynamic suggestion, SearchType type)? onSuggestionSelected;
+  final TextEditingController? externalController;
+
+  const UnifiedAutocompleteSearch({
     super.key,
-    this.hintText,
+    this.initialHintText,
     this.onSuggestionSelected,
-    this.controller,
+    this.externalController,
   });
 
   @override
-  ConsumerState<CityAutocompleteSearch> createState() =>
-      _CityAutocompleteSearchState();
+  ConsumerState<UnifiedAutocompleteSearch> createState() =>
+      _UnifiedAutocompleteSearchState();
 }
 
-class _CityAutocompleteSearchState
-    extends ConsumerState<CityAutocompleteSearch> {
+class _UnifiedAutocompleteSearchState extends ConsumerState<UnifiedAutocompleteSearch> {
   late final TextEditingController _textController;
   final FocusNode _focusNode = FocusNode();
-  OverlayEntry? _overlayEntry;
-  final LayerLink _layerLink = LayerLink();
+  final LayerLink _textFieldLink = LayerLink();
+
+  OverlayEntry? _suggestionsOverlayEntry;
+  OverlayEntry? _toggleButtonsOverlayEntry;
+
+  SearchType _currentSearchType = SearchType.city;
+  final List<bool> _toggleButtonSelection = [true, false]; // [City, Place]
+
+  // Debounce timer for search
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
-    _textController = widget.controller ?? TextEditingController();
-
+    _textController = widget.externalController ?? TextEditingController();
     _textController.addListener(_onTextChanged);
     _focusNode.addListener(_onFocusChanged);
   }
 
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _textController.removeListener(_onTextChanged);
+    _focusNode.removeListener(_onFocusChanged);
+    if (widget.externalController == null) {
+      _textController.dispose();
+    }
+    _focusNode.dispose();
+    _removeSuggestionsOverlay();
+    _removeToggleButtonsOverlay();
+    super.dispose();
+  }
+
   void _onTextChanged() {
     if (!mounted) return;
+
+    _searchDebounce?.cancel();
     if (_focusNode.hasFocus && _textController.text.isNotEmpty) {
-      ref.read(citySearchProvider.notifier).search(_textController.text);
-      // Overlay creation/update will be handled by ref.listen
+      _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+        if (!mounted || !_focusNode.hasFocus || _textController.text.isEmpty) return;
+        if (_currentSearchType == SearchType.city) {
+          ref.read(citySearchProvider.notifier).search(_textController.text);
+        } else {
+          ref.read(placeSearchProvider.notifier).search(_textController.text);
+        }
+      });
     } else {
-      // If text becomes empty, clear suggestions and remove overlay
-      ref.read(citySearchProvider.notifier).clearSuggestions();
-      _removeOverlay();
+      _clearCurrentSuggestions();
+      _removeSuggestionsOverlay(); // Also remove if text becomes empty
     }
   }
 
   void _onFocusChanged() {
     if (!mounted) return;
     if (_focusNode.hasFocus) {
+      _showToggleButtonsOverlay();
+      // If there's text, the text listener will handle the search.
+      // If suggestions were previously dismissed, ensure they are shown if applicable.
       if (_textController.text.isNotEmpty) {
-        // If focused and text exists, ensure search is triggered (e.g., if overlay was dismissed)
-        ref.read(citySearchProvider.notifier).search(_textController.text);
-        // Overlay creation/update will be handled by ref.listen
+         _triggerOverlayUpdateBasedOnCurrentState();
       }
     } else {
-      // Delay removal to allow tap on suggestion
+      _removeToggleButtonsOverlay();
+      // Delay removal of suggestions overlay to allow tap on a suggestion item
       Future.delayed(const Duration(milliseconds: 200), () {
-        if (!mounted || _focusNode.hasFocus) return; // Check again
-        _removeOverlay();
-        // Optionally clear suggestions when focus is lost and overlay is removed
-        // ref.read(citySearchProvider.notifier).clearSuggestions();
+        if (mounted && !_focusNode.hasFocus) {
+          _removeSuggestionsOverlay();
+        }
       });
     }
   }
+  
+  void _triggerOverlayUpdateBasedOnCurrentState() {
+    final currentProvider = _currentSearchType == SearchType.city
+        ? citySearchProvider
+        : placeSearchProvider;
+    final currentState = ref.read(currentProvider); // Read, don't watch here
 
-  @override
-  void dispose() {
-    // Dispose controller only if it was created internally
-    if (widget.controller == null) {
-      _textController.dispose();
+    if (currentState is AsyncData && currentState.value!.isNotEmpty ||
+        currentState is AsyncLoading ||
+        currentState is AsyncError) {
+      _showSuggestionsOverlay();
     }
-    _focusNode.dispose();
-    _removeOverlay();
-    super.dispose();
   }
 
-  void _createOverlay() {
-    if (!mounted || _overlayEntry != null) return;
-
-    _overlayEntry = _buildOverlayEntry();
-    Overlay.of(context, rootOverlay: true).insert(_overlayEntry!);
+  void _clearCurrentSuggestions() {
+    if (_currentSearchType == SearchType.city) {
+      ref.read(citySearchProvider.notifier).clearSuggestions();
+    } else {
+      ref.read(placeSearchProvider.notifier).clearSuggestions();
+    }
   }
 
-  void _removeOverlay() {
-    if (!mounted) return;
-    _overlayEntry?.remove();
-    _overlayEntry = null;
+  // --- Toggle Buttons Overlay Management ---
+  void _showToggleButtonsOverlay() {
+    if (!mounted || _toggleButtonsOverlayEntry != null) return;
+    _toggleButtonsOverlayEntry = _buildToggleButtonsOverlay();
+    Overlay.of(context).insert(_toggleButtonsOverlayEntry!);
   }
 
-  OverlayEntry _buildOverlayEntry() {
-    // final suggestionsState = ref.watch(citySearchProvider); // Not needed here if overlay rebuilds via markNeedsBuild
-    // The OverlayEntry builder will have its own BuildContext and can watch the provider.
+  void _removeToggleButtonsOverlay() {
+    _toggleButtonsOverlayEntry?.remove();
+    _toggleButtonsOverlayEntry = null;
+  }
+
+  OverlayEntry _buildToggleButtonsOverlay() {
+    final RenderBox textFieldRenderBox = context.findRenderObject() as RenderBox;
+    final textFieldSize = textFieldRenderBox.size;
 
     return OverlayEntry(
-      builder: (context) {
-        // Watch the provider inside the OverlayEntry's builder context
-        final suggestionsState = ref.watch(citySearchProvider);
-        final RenderBox textFieldRenderBox = this.context.findRenderObject() as RenderBox;
-        final textFieldSize = textFieldRenderBox.size;
+      builder: (overlayContext) => Positioned(
+        width: textFieldSize.width,
+        child: CompositedTransformFollower(
+          link: _textFieldLink,
+          showWhenUnlinked: false,
+          offset: Offset(0.0, textFieldSize.height + 2.0), // Position just below TextField
+          child: Material(
+            elevation: 2.0,
+            borderRadius: BorderRadius.circular(8.0),
+            child: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: ToggleButtons(
+                isSelected: _toggleButtonSelection,
+                onPressed: (int index) {
+                  if (!mounted) return;
+                  setState(() {
+                    for (int i = 0; i < _toggleButtonSelection.length; i++) {
+                      _toggleButtonSelection[i] = i == index;
+                    }
+                    _currentSearchType = index == 0 ? SearchType.city : SearchType.place;
+                  });
+                  _clearCurrentSuggestions(); // Clear old suggestions
+                  _removeSuggestionsOverlay(); // Remove the old overlay immediately
+                  if (_textController.text.isNotEmpty) {
+                    _onTextChanged(); // Trigger search for the new type if text exists
+                  }
+                  _toggleButtonsOverlayEntry?.markNeedsBuild(); // Rebuild toggles for visual update
+                },
+                borderRadius: BorderRadius.circular(6.0),
+                selectedBorderColor: Theme.of(context).primaryColor,
+                selectedColor: Colors.white,
+                fillColor: Theme.of(context).primaryColor,
+                color: Theme.of(context).primaryColorDark, // Or onSurface
+                constraints: BoxConstraints(
+                    minHeight: 36.0,
+                    minWidth: (textFieldSize.width / _toggleButtonSelection.length) - 10), // Adjusted width
+                children: <Widget>[
+                  Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(SearchType.city.displayName)),
+                  Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(SearchType.place.displayName)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Suggestions Overlay Management ---
+  void _showSuggestionsOverlay() {
+    if (!mounted) return;
+    if (_suggestionsOverlayEntry == null) {
+      _suggestionsOverlayEntry = _buildSuggestionsOverlay();
+      Overlay.of(context).insert(_suggestionsOverlayEntry!);
+    } else {
+      // If overlay exists, mark it to rebuild with new data/state
+      _suggestionsOverlayEntry?.markNeedsBuild();
+    }
+  }
+
+  void _removeSuggestionsOverlay() {
+    _suggestionsOverlayEntry?.remove();
+    _suggestionsOverlayEntry = null;
+  }
+
+  OverlayEntry _buildSuggestionsOverlay() {
+    final RenderBox textFieldRenderBox = context.findRenderObject() as RenderBox;
+    final textFieldSize = textFieldRenderBox.size;
+    // Estimate toggle buttons height (adjust if necessary)
+    const double toggleButtonsAndPaddingHeight = 50.0; // Approx height of toggle buttons + its padding
+
+    return OverlayEntry(
+      builder: (overlayContext) {
+        // Watch the correct provider within the Overlay's builder
+        final AsyncValue<List<dynamic>> suggestionsAsyncValue =
+            _currentSearchType == SearchType.city
+                ? ref.watch(citySearchProvider)
+                : ref.watch(placeSearchProvider);
 
         return Positioned(
           width: textFieldSize.width,
           child: CompositedTransformFollower(
-            link: _layerLink,
+            link: _textFieldLink,
             showWhenUnlinked: false,
-            offset: Offset(0.0, textFieldSize.height + 5.0),
+            offset: Offset(0.0, textFieldSize.height + toggleButtonsAndPaddingHeight + 2.0), // Below toggles
             child: Material(
               elevation: 4.0,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 250), // Max height for suggestions
-                child: suggestionsState.when(
+                constraints: const BoxConstraints(maxHeight: 220), // Max height of suggestions list
+                child: suggestionsAsyncValue.when(
                   data: (suggestions) {
-                    // User's debug print:
-                    // print('Overlay rendering suggestions: $suggestions, Text: ${_textController.text}');
-
-                    if (!_focusNode.hasFocus &&_textController.text.isEmpty) {
-                        // This case should ideally be caught by listeners removing the overlay
-                        return const SizedBox.shrink();
+                    if (!_focusNode.hasFocus || _textController.text.isEmpty) {
+                      // This might be redundant if _removeSuggestionsOverlay is called correctly,
+                      // but acts as a safeguard.
+                      return const SizedBox.shrink();
                     }
-
-                    if (suggestions.isEmpty && _textController.text.isNotEmpty) {
+                    if (suggestions.isEmpty) {
                       return ListTile(
-                        title: Text('No cities found for "${_textController.text}"'),
+                        title: Text(
+                            'No ${_currentSearchType.displayName.toLowerCase()}s found for "${_textController.text}"'),
                         dense: true,
                       );
                     }
-                    if (suggestions.isNotEmpty) {
-                      return ListView.builder(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        itemCount: suggestions.length,
-                        itemBuilder: (context, index) {
-                          final suggestion = suggestions[index];
-                          return ListTile(
-                            leading: (suggestion.images != null && suggestion.images!.isNotEmpty)
-                                ? CircleAvatar(
-                                    radius: 18,
-                                    backgroundImage: NetworkImage(suggestion.images!.first),
-                                    onBackgroundImageError: (exception, stackTrace) {
-                                      // Optionally log error or show placeholder
-                                      // print("Error loading image: ${suggestion.images!.first}");
-                                    },
-                                  )
-                                : null, // Or a default Icon(Icons.location_city)
-                            title: Text(suggestion.name),
-                            subtitle: Text(suggestion.countryName),
-                            dense: true,
-                            onTap: () {
-                              _textController.text = suggestion.name;
-                              _textController.selection = TextSelection.fromPosition(
-                                TextPosition(offset: _textController.text.length),
-                              );
-                              _removeOverlay(); // Remove overlay first
-                              _focusNode.unfocus(); // Then unfocus
-                              ref.read(citySearchProvider.notifier).clearSuggestions();
-                              widget.onSuggestionSelected?.call(suggestion);
-                            },
-                          );
-                        },
-                      );
-                    }
-                    return const SizedBox.shrink(); // Fallback if no conditions met
+                    return ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      itemCount: suggestions.length,
+                      itemBuilder: (ctx, index) {
+                        final item = suggestions[index];
+                        String title = 'Unknown';
+                        String subtitle = '';
+                        Widget? leading;
+
+                        if (item is CitySearchSuggestion) {
+                          title = item.name;
+                          subtitle = item.countryName;
+                          if (item.images != null && item.images!.isNotEmpty) {
+                            leading = CircleAvatar(
+                                radius: 18,
+                                backgroundImage: NetworkImage(item.images!.first),
+                                onBackgroundImageError: (e,s) {});
+                          }
+                        } else if (item is PlaceSearchSuggestion) {
+                          title = item.name;
+                          subtitle = item.displaySubtitle; // Using the getter
+                           if (item.images.isNotEmpty) {
+                            leading = CircleAvatar(
+                                radius: 18,
+                                backgroundImage: NetworkImage(item.images.first),
+                                onBackgroundImageError: (e,s) {});
+                          }
+                        }
+
+                        return ListTile(
+                          leading: leading,
+                          title: Text(title),
+                          subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
+                          dense: true,
+                          onTap: () {
+                            _textController.text = title;
+                            _textController.selection = TextSelection.fromPosition(
+                                TextPosition(offset: _textController.text.length));
+                            _removeSuggestionsOverlay();
+                            _removeToggleButtonsOverlay();
+                            _focusNode.unfocus();
+                            _clearCurrentSuggestions();
+                            widget.onSuggestionSelected?.call(item, _currentSearchType);
+                          },
+                        );
+                      },
+                    );
                   },
                   loading: () => const Center(
-                    heightFactor: 2,
-                    child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3)),
-                  ),
-                  error: (error, stack) {
-                    String errorMessage = "An error occurred";
-                     if (error is Exception) {
-                       errorMessage = error.toString().replaceFirst("Exception: ", "");
-                     } else {
-                       errorMessage = error.toString();
-                     }
-                    return ListTile(
-                      title: Text(errorMessage, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                      dense: true,
-                    );
-                  }
+                      heightFactor: 2.5,
+                      child: SizedBox(
+                          width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3))),
+                  error: (err, stack) => ListTile(
+                      title: Text('Error loading ${_currentSearchType.displayName.toLowerCase()}s',
+                          style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                      dense: true),
                 ),
               ),
             ),
@@ -194,79 +322,58 @@ class _CityAutocompleteSearchState
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<List<CitySearchSuggestion>>>(citySearchProvider, (previous, next) {
-      if (!mounted) return;
-      final bool hasFocus = _focusNode.hasFocus;
-      final bool textNotEmpty = _textController.text.isNotEmpty;
+    // Listen to state changes for the currently active search type
+    // This will trigger showing/updating the suggestions overlay
+    final activeSearchProvider = _currentSearchType == SearchType.city
+        ? citySearchProvider
+        : placeSearchProvider;
 
-      if (hasFocus && textNotEmpty) {
-        // Conditions to show/update overlay:
-        // 1. Loading state.
-        // 2. Error state.
-        // 3. Data state (even if empty, _buildOverlayEntry handles "no results").
-        if (next is AsyncLoading || next is AsyncError || next is AsyncData) {
-          if (_overlayEntry == null) {
-            _createOverlay();
-          } else {
-            // If overlay exists, and state changes (e.g. loading -> data),
-            // tell the existing overlay to rebuild its contents.
-            _overlayEntry?.markNeedsBuild();
-          }
+    ref.listen(activeSearchProvider, (previous, next) {
+      if (!mounted) return;
+      if (_focusNode.hasFocus && _textController.text.isNotEmpty) {
+        if (next is AsyncData || next is AsyncLoading || next is AsyncError) {
+          _showSuggestionsOverlay(); // Create or mark for rebuild
         }
       } else {
-        // If not focused or text becomes empty, remove the overlay.
-        _removeOverlay();
+        _removeSuggestionsOverlay(); // Remove if no focus or text is empty
       }
     });
 
     return CompositedTransformTarget(
-      link: _layerLink,
+      link: _textFieldLink,
       child: TextField(
         controller: _textController,
         focusNode: _focusNode,
         decoration: InputDecoration(
-          hintText: widget.hintText ?? 'Search for a city...',
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          hintText: widget.initialHintText ?? 'Search for a ${_currentSearchType.displayName.toLowerCase()}...',
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
           suffixIcon: _textController.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: const Icon(Icons.clear, size: 20),
                   onPressed: () {
-                    _textController.clear();
-                    // _onTextChanged will be called, which handles clearing suggestions and overlay
+                    _textController.clear(); // This will trigger _onTextChanged
                   },
                 )
               : null,
         ),
         onTap: () {
-          // If already focused and text is not empty, an tap might be to ensure overlay is visible
-          // if it was somehow dismissed.
-          if (_focusNode.hasFocus && _textController.text.isNotEmpty) {
-            // Check if suggestions need to be fetched again or overlay needs to be reshown
-            final currentState = ref.read(citySearchProvider);
-            if (currentState is AsyncData && _overlayEntry == null) {
-                 _createOverlay(); // Re-create if was removed while still focused with text
-            } else if (currentState is! AsyncLoading) {
-              // If not loading, might re-trigger search to be sure
-              ref.read(citySearchProvider.notifier).search(_textController.text);
+          // Ensure overlays are managed correctly on tap, especially if already focused
+          if (_focusNode.hasFocus) {
+            _showToggleButtonsOverlay();
+             if (_textController.text.isNotEmpty) {
+                _triggerOverlayUpdateBasedOnCurrentState();
             }
+          } else {
+            _focusNode.requestFocus(); // _onFocusChanged will handle showing overlays
           }
         },
         onSubmitted: (value) {
-          final currentSuggestions = ref.read(citySearchProvider).asData?.value;
-          if (currentSuggestions != null && currentSuggestions.isNotEmpty) {
-            final bestMatch = currentSuggestions.firstWhere(
-              (s) => s.name.toLowerCase() == value.toLowerCase().trim(),
-              orElse: () => currentSuggestions.first, // Fallback to the first suggestion
-            );
-            _textController.text = bestMatch.name;
-            _textController.selection = TextSelection.fromPosition(
-              TextPosition(offset: _textController.text.length),
-            );
-            widget.onSuggestionSelected?.call(bestMatch);
-          }
-          _removeOverlay();
+          // Basic submit: just unfocus and clear
+          _removeSuggestionsOverlay();
+          _removeToggleButtonsOverlay();
           _focusNode.unfocus();
-          ref.read(citySearchProvider.notifier).clearSuggestions();
+          _clearCurrentSuggestions();
         },
       ),
     );

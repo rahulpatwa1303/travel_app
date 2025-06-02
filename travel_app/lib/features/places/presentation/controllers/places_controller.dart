@@ -58,8 +58,7 @@ final placesProvider = FutureProvider.autoDispose
 
   final placesRepository = ref.watch(placesRepositoryProvider);
   print("--- Fetching places with params: ${params.cityId}, ${params.category}, ${params.interests} ---");
-  return placesRepository.getBestPlaces(
-    cityId: params.cityId,
+  return placesRepository.getPlacesListByCategory(
     category: params.category,
     interests: params.interests ?? "",
     page: params.page,

@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:travel_app/core/enums/search_type.dart';
 import 'package:travel_app/core/router/app_router.dart';
 import 'package:travel_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:travel_app/features/places/domain/city_suggestion_model.dart';
 import 'package:travel_app/features/places/domain/place_model.dart'; // Still needed for Category section
 import 'package:travel_app/features/places/domain/place_state.dart';
+import 'package:travel_app/features/places/domain/place_suggestion_model.dart';
 import 'package:travel_app/features/places/domain/places_notifier.dart';
 import 'package:travel_app/features/places/domain/top_place_model.dart'; // Needed for Top Places section
 import 'package:travel_app/features/places/presentation/controllers/places_controller.dart';
+import 'package:travel_app/features/places/presentation/providers/paginated_category_places_provider.dart';
 // Import the State and Notifier for infinite scroll
 import 'package:travel_app/features/places/presentation/widget/carousel_view.dart';
+import 'package:travel_app/features/places/presentation/widget/category_places_grid.dart';
 import 'package:travel_app/features/places/presentation/widget/city_autocomplete_search.dart';
 import 'package:travel_app/widget/floating_heart_button.dart';
 import 'package:go_router/go_router.dart';
@@ -97,9 +102,9 @@ class PlacesScreen extends ConsumerWidget {
       (index) => Place(
         id: index,
         name: "Loading Place Name...",
-        description: "This is a longer description loading...",
+        attributes: {},
         // Ensure imageUrl is not null if the widget expects it
-        imageURL: "", // Or a valid placeholder URL if required by widget logic
+        images: [], // Or a valid placeholder URL if required by widget logic
         // Add other required fields from your Place model with dummy values
         // city: City(id: 0, name: 'City'),
       ),
@@ -149,14 +154,7 @@ class PlacesScreen extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 8),
-                      Expanded(
-                        child: Text(
-                          place.description ?? '', // Will be skeletonized
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
+
                       // Add skeletons for other elements if present in the real item
                       // const SizedBox(height: 4),
                       // const Bone.text(words: 1, width: 0.6), // Example for city/location line
@@ -387,91 +385,120 @@ class PlacesScreen extends ConsumerWidget {
                     child: Text('No places found for this category.'),
                   );
                 }
+                if (selectedCategory != null) {
+                  // selectedCategory is from ref.watch(selectedCategoryProvider)
+                  final categoryPlacesParams = CategoryPlacesParams(
+                    category:
+                        selectedCategory, // This is the OSM value or API key
+                    interests:
+                        "food,sightseeing", // TODO: Source this appropriately (e.g., user profile, fixed)
+                  );
 
-                return SizedBox(
-                  height: 180, // Fixed height for the category list
-                  child: ListView.builder(
-                    cacheExtent:
-                        9999, // Consider reducing this if performance is an issue
-                    scrollDirection: Axis.horizontal,
-                    itemCount: placesResponse.places.length, // Use list length
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                    ), // Add padding for list edges
-                    itemBuilder: (context, index) {
-                      final place = placesResponse.places[index];
-                      // Handle image loading for this section
-                      final image =
-                          place.usesDefaultImage
-                              ? const AssetImage('assets/city.png')
-                              : NetworkImage(place.imageURL!) as ImageProvider;
+                  // The CategoryPlacesGridWidget needs bounded height.
+                  // If its parent Column is inside SingleChildScrollView, give it a fixed height.
+                  return SizedBox(
+                    height:
+                        450, // <<<< ADJUST THIS HEIGHT as needed for your 3x3 grid + potential extra rows
+                    child: CategoryPlacesHorizontalGridWidget(
+                      params: categoryPlacesParams,
+                      // Optionally adjust these if your items are very different in size:
+                      // gridPageWidth: 350, // total width for one 3x3 grid "page"
+                      // itemHeight: 110, // height of a single item in the grid
+                    ),
+                  );
+                } else {
+                  // If no category is selected yet, show a placeholder or prompt
+                  return Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(
+                      child: Text("Select a category to see places."),
+                    ),
+                  );
+                }
+                // return SizedBox(
+                //   height: 180, // Fixed height for the category list
+                //   child: ListView.builder(
+                //     cacheExtent:
+                //         9999, // Consider reducing this if performance is an issue
+                //     scrollDirection: Axis.horizontal,
+                //     itemCount: placesResponse.places.length, // Use list length
+                //     padding: const EdgeInsets.symmetric(
+                //       horizontal: 8.0,
+                //     ), // Add padding for list edges
+                //     itemBuilder: (context, index) {
+                //       final place = placesResponse.places[index];
+                //       // Handle image loading for this section
+                //       final image =
+                //           place.usesDefaultImage
+                //               ? const AssetImage('assets/city.png')
+                //               : NetworkImage(place.imageURL!) as ImageProvider;
 
-                      return Container(
-                        width: 160,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Stack(
-                          children: [
-                            // Background image
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                image: DecorationImage(
-                                  image: image,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            // Dark overlay for readability
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.black.withOpacity(0.3),
-                                    Colors.black.withOpacity(0.6),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            // Text content
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    place.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Expanded(
-                                    child: Text(
-                                      place.description ?? 'No description',
-                                      maxLines: 4,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                );
+                //       return Container(
+                //         width: 160,
+                //         margin: const EdgeInsets.symmetric(horizontal: 8),
+                //         child: Stack(
+                //           children: [
+                //             // Background image
+                //             Container(
+                //               decoration: BoxDecoration(
+                //                 borderRadius: BorderRadius.circular(12),
+                //                 image: DecorationImage(
+                //                   image: image,
+                //                   fit: BoxFit.cover,
+                //                 ),
+                //               ),
+                //             ),
+                //             // Dark overlay for readability
+                //             Container(
+                //               decoration: BoxDecoration(
+                //                 borderRadius: BorderRadius.circular(12),
+                //                 gradient: LinearGradient(
+                //                   begin: Alignment.topCenter,
+                //                   end: Alignment.bottomCenter,
+                //                   colors: [
+                //                     Colors.black.withOpacity(0.3),
+                //                     Colors.black.withOpacity(0.6),
+                //                   ],
+                //                 ),
+                //               ),
+                //             ),
+                //             // Text content
+                //             Padding(
+                //               padding: const EdgeInsets.all(12),
+                //               child: Column(
+                //                 crossAxisAlignment: CrossAxisAlignment.start,
+                //                 children: [
+                //                   Text(
+                //                     place.name,
+                //                     style: const TextStyle(
+                //                       fontWeight: FontWeight.bold,
+                //                       fontSize: 16,
+                //                       color: Colors.white,
+                //                     ),
+                //                     maxLines: 1,
+                //                     overflow: TextOverflow.ellipsis,
+                //                   ),
+                //                   const SizedBox(height: 8),
+                //                   Expanded(
+                //                     child: Text(
+                //                       place.description ?? 'No description',
+                //                       maxLines: 4,
+                //                       overflow: TextOverflow.ellipsis,
+                //                       style: const TextStyle(
+                //                         fontSize: 12,
+                //                         color: Colors.white70,
+                //                       ),
+                //                     ),
+                //                   ),
+                //                 ],
+                //               ),
+                //             ),
+                //           ],
+                //         ),
+                //       );
+                //     },
+                //   ),
+                // );
               },
               loading:
                   () => _buildCategoryPlacesSkeleton(
@@ -509,6 +536,8 @@ class PlacesScreen extends ConsumerWidget {
         FocusManager.instance.primaryFocus?.unfocus(); // More common way
       }
     }
+
+    final TextEditingController searchController = TextEditingController();
 
     return GestureDetector(
       onTap: () => _unfocus(context),
@@ -553,44 +582,70 @@ class PlacesScreen extends ConsumerWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: CityAutocompleteSearch(
-                    hintText: 'Enter city name...',
-                    onSuggestionSelected: (suggestion) {
-                      // Handle the selected city
-                      final detailPath = AppRoutePaths.cityDetails.replaceFirst(
-                        ':placeId',
-                        suggestion.id.toString(),
-                      );
-                      context.push(detailPath, extra: suggestion);
-                      print(
-                        'Selected city: ${suggestion.name} (ID: ${suggestion.id})',
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('You selected: ${suggestion.name}'),
-                        ),
-                      );
+                  child: UnifiedAutocompleteSearch(
+                    // controller: searchController, // Optional: Pass your own controller
+                    initialHintText: 'Start typing...', // Generic hint
+                    onSuggestionSelected: (suggestion, type) {
+                      // This callback receives the selected item and its type
+
+                      _unfocus(
+                        context,
+                      ); // Unfocus after selection (widget also does this)
+                      // SearchController() // Clear the search field
+
+                      if (type == SearchType.city &&
+                          suggestion is CitySearchSuggestion) {
+                        // It's a City!
+                        print(
+                          'Selected City: ${suggestion.name} (ID: ${suggestion.id})',
+                        );
+                        print('Country: ${suggestion.countryName}');
+
+                        // Example: Navigate to City Details Screen
+                        final cityDetailPath = AppRoutePaths.cityDetails
+                            .replaceFirst(
+                              ':placeId', // Assuming your city detail route uses :placeId for city_id
+                              suggestion.id.toString(),
+                            );
+                        context.push(
+                          cityDetailPath,
+                          extra: suggestion,
+                        ); // Pass CitySearchSuggestion as extra
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('City selected: ${suggestion.name}'),
+                          ),
+                        );
+                      } else if (type == SearchType.place &&
+                          suggestion is PlaceSearchSuggestion) {
+                        // It's a Place!
+                        print(
+                          'Selected Place: ${suggestion.name} (ID: ${suggestion.id})',
+                        );
+                        print(
+                          'Category: ${suggestion.category}, Address: ${suggestion.address}',
+                        );
+                        // If you have images for places:
+                        // print('First Image: ${suggestion.images.isNotEmpty ? suggestion.images.first : "No image"}');
+
+                        // Example: Navigate to Place Details Screen (if you have one)
+                        // Or maybe show it on a map, or add to a list, etc.
+                        // final placeDetailPath = AppRoutePaths.placeDetails.replaceFirst(':placeId', suggestion.id.toString());
+                        // context.push(placeDetailPath, extra: suggestion);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Place selected: ${suggestion.name}'),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ),
                 // Integrate the built Top Places section widget
                 topPlacesSection,
                 const SizedBox(height: 24), // Add space between sections
-                FloatingHeartLikeButton(
-                  initialIsLiked: true,
-                  size: 24, // Adjust size as needed
-                  onLikedChanged: (bool liked) {
-                    // print("Place ${place.id} liked: $liked");
-                    // // Update the state using the provider
-                    // ref.read(placeLikeStateProvider.notifier).update((state) {
-                    //    // Create a mutable copy, update, return immutable
-                    //    final newState = Map<int, bool>.from(state);
-                    //    newState[place.id] = liked;
-                    //    return newState;
-                    // });
-                    // TODO: Add logic here to sync with your backend API
-                  },
-                ),
                 // Integrate the built Categories section widget
                 categorySection,
 

@@ -1,0 +1,332 @@
+{
+  "api_summary": "Documentation for FastAPI Travel Backend V1",
+  "base_path": "/api/v1",
+  "authentication_method": "Bearer Token (JWT)",
+  "endpoints": {
+    "/auth": [
+      {
+        "endpoint": "POST /auth/register",
+        "description": "Registers a new user.",
+        "authentication": "Not Required",
+        "method": "POST",
+        "request_body": {
+          "format": "JSON",
+          "schema": "UserCreate",
+          "example": {
+            "email": "newuser@example.com",
+            "password": "aSecurePassword123",
+            "full_name": "Test User"
+          }
+        },
+        "response": {
+          "status": "201 Created",
+          "body_schema": "User",
+          "notes": "Returns user details without password. Returns 400 if email already exists."
+        },
+        "example_curl": "curl -X POST \"http://localhost:8000/api/v1/auth/register\" -H \"Content-Type: application/json\" -d '{\"email\":\"newuser@example.com\", \"password\":\"aSecurePassword123\", \"full_name\":\"Test User\"}'"
+      },
+      {
+        "endpoint": "POST /auth/login",
+        "description": "Logs in a user using email and password to obtain JWT tokens.",
+        "authentication": "Not Required",
+        "method": "POST",
+        "request_body": {
+          "format": "application/x-www-form-urlencoded",
+          "fields": [
+            {"name": "username", "description": "User's email address"},
+            {"name": "password", "description": "User's password"}
+          ]
+        },
+        "response": {
+          "status": "200 OK",
+          "body_schema": "Token",
+          "notes": "Returns access and refresh tokens. Returns 401 for incorrect credentials, 400 for inactive user."
+        },
+        "example_curl": "curl -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/x-www-form-urlencoded\" --data-urlencode \"username=testuser@example.com\" --data-urlencode \"password=password123\""
+      },
+      {
+        "endpoint": "POST /auth/refresh",
+        "description": "Refreshes the access token using a valid refresh token.",
+        "authentication": "Not Required",
+        "method": "POST",
+        "request_body": {
+          "format": "JSON",
+          "schema": "RefreshTokenRequest",
+          "example": {"refresh_token": "YOUR_VALID_REFRESH_TOKEN"}
+        },
+        "response": {
+          "status": "200 OK",
+          "body_schema": "Token",
+          "notes": "Returns a new access token and a new refresh token (rotation). Returns 401 if refresh token is invalid/expired/revoked."
+        },
+        "example_curl": "curl -X POST \"http://localhost:8000/api/v1/auth/refresh\" -H \"Content-Type: application/json\" -d '{\"refresh_token\":\"YOUR_VALID_REFRESH_TOKEN\"}'"
+      },
+      {
+        "endpoint": "POST /auth/logout",
+        "description": "Logs out the current user by invalidating their stored refresh token.",
+        "authentication": "Required (Bearer Token)",
+        "method": "POST",
+        "response": {
+          "status": "204 No Content",
+          "notes": "No response body."
+        },
+        "example_curl": "curl -v -X POST \"http://localhost:8000/api/v1/auth/logout\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+      {
+        "endpoint": "GET /auth/me",
+        "description": "Gets the profile information for the currently logged-in user.",
+        "authentication": "Required (Bearer Token)",
+        "method": "GET",
+        "response": {
+          "status": "200 OK",
+          "body_schema": "User",
+          "notes": "Returns 401 if token is invalid or user is inactive."
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/auth/me\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      }
+    ],
+    "/cities": [
+      {
+        "endpoint": "GET /cities/popular",
+        "description": "Gets a list of popular cities, including country and one cached image. Triggers background image fetching if needed.",
+        "authentication": "Not Required",
+        "method": "GET",
+        "query_params": [
+          {"name": "limit", "type": "int", "required": false, "default": 20, "description": "Max number of cities per page."},
+          {"name": "offset", "type": "int", "required": false, "default": 0, "description": "Number of cities to skip."},
+          {"name": "country", "type": "str", "required": false, "default": null, "description": "Filter by country name (case-insensitive, partial match)."}
+        ],
+        "response": {
+          "status": "200 OK",
+          "body_schema": "List[City]",
+          "notes": "City object includes nested country and images list."
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/cities/popular?limit=10&country=italy\" -H \"accept: application/json\""
+      },
+      {
+        "endpoint": "GET /cities/",
+        "description": "Searches/Lists cities with filters for name query and/or country. Includes existing cached images only.",
+        "authentication": "Not Required",
+        "method": "GET",
+         "query_params": [
+          {"name": "limit", "type": "int", "required": false, "default": 20, "description": "Max number of cities per page."},
+          {"name": "offset", "type": "int", "required": false, "default": 0, "description": "Number of cities to skip."},
+          {"name": "country", "type": "str", "required": false, "default": null, "description": "Filter by country name (case-insensitive, partial match)."},
+          {"name": "q", "type": "str", "required": false, "default": null, "description": "Search query for city name (case-insensitive, partial match)."}
+        ],
+        "response": {
+          "status": "200 OK",
+          "body_schema": "List[City]",
+          "notes": "Use q for searching. Returns only previously cached images."
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/cities/?q=par&limit=5\" -H \"accept: application/json\""
+      },
+      {
+        "endpoint": "GET /cities/{city_id}",
+        "description": "Gets detailed information for a specific city, including enriched data (description, budget, etc.) and weather forecast.",
+        "authentication": "Not Required",
+        "method": "GET",
+        "path_params": [
+          {"name": "city_id", "type": "int", "required": true, "description": "ID of the city to retrieve.", "example": 2}
+        ],
+        "response": {
+          "status": "200 OK",
+          "body_schema": "CityDetail",
+          "notes": "Includes nested country, images list, and weather_forecast object (from Open-Meteo). Returns 404 if city not found."
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/cities/2\" -H \"accept: application/json\""
+      }
+    ],
+    "/places": [
+      {
+        "endpoint": "GET /places/categories",
+        "description": "Gets a distinct, sorted list of all available place categories.",
+        "authentication": "Not Required",
+        "method": "GET",
+         "response": {
+          "status": "200 OK",
+          "body_schema": "List[str]",
+          "notes": "Example: [\"restaurant\", \"museum\", \"park\"]"
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/places/categories\" -H \"accept: application/json\""
+      },
+      {
+        "endpoint": "GET /places/",
+        "description": "Searches/Lists places with filtering (city, category), FTS (q), sorting, pagination. Includes cached images and embedded city/country info. Triggers background image fetch for missing images.",
+        "authentication": "Not Required",
+        "method": "GET",
+        "query_params": [
+          {"name": "limit", "type": "int", "required": false, "default": 20, "description": "Max number of places."},
+          {"name": "offset", "type": "int", "required": false, "default": 0, "description": "Number of places to skip."},
+          {"name": "city_id", "type": "int", "required": false, "default": null, "description": "Filter by city ID."},
+          {"name": "category", "type": "str", "required": false, "default": null, "description": "Filter by category name (case-insensitive)."},
+          {"name": "q", "type": "str", "required": false, "default": null, "description": "Full-text search query."},
+          {"name": "sort_by", "type": "enum (PlaceSortOptions)", "required": false, "default": "name_asc", "description": "Sort order: 'name_asc', 'name_desc', 'relevance' (requires 'q')."}
+        ],
+         "response": {
+          "status": "200 OK",
+          "body_schema": "List[Place]",
+          "notes": "Place object includes nested city/country and images list."
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/places/?city_id=2&category=restaurant&q=sushi&sort_by=relevance&limit=10\" -H \"accept: application/json\""
+      },
+       {
+        "endpoint": "GET /places/{place_id}",
+        "description": "Gets detailed information for a specific place by its ID. Triggers background image fetch if needed.",
+        "authentication": "Not Required",
+        "method": "GET",
+        "path_params": [
+          {"name": "place_id", "type": "int", "required": true, "description": "ID of the place to retrieve.", "example": 522216}
+        ],
+        "response": {
+          "status": "200 OK",
+          "body_schema": "PlaceDetail",
+          "notes": "Includes details like description, website, attributes, images list. Returns 404 if place not found."
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/places/522216\" -H \"accept: application/json\""
+      }
+    ],
+    "/users": [
+       {
+        "endpoint": "POST /users/me/favorites/{place_id}",
+        "description": "Marks a place as a favorite for the current user.",
+        "authentication": "Required (Bearer Token)",
+        "method": "POST",
+         "path_params": [
+          {"name": "place_id", "type": "int", "required": true, "description": "ID of the place to favorite.", "example": 522216}
+        ],
+        "response": {
+          "status": "200 OK",
+          "notes": "No response body. Returns 404 if place not found."
+        },
+        "example_curl": "curl -v -X POST \"http://localhost:8000/api/v1/users/me/favorites/522216\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+      {
+        "endpoint": "DELETE /users/me/favorites/{place_id}",
+        "description": "Removes a place from the current user's favorites.",
+        "authentication": "Required (Bearer Token)",
+        "method": "DELETE",
+         "path_params": [
+          {"name": "place_id", "type": "int", "required": true, "description": "ID of the place to unfavorite.", "example": 522216}
+        ],
+        "response": {
+          "status": "204 No Content",
+          "notes": "Returns 404 if place not found or wasn't favorited by user."
+        },
+        "example_curl": "curl -v -X DELETE \"http://localhost:8000/api/v1/users/me/favorites/522216\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+       {
+        "endpoint": "GET /users/me/favorites",
+        "description": "Gets the list of place objects favorited by the current user.",
+        "authentication": "Required (Bearer Token)",
+        "method": "GET",
+         "query_params": [
+          {"name": "limit", "type": "int", "required": false, "default": 100, "description": "Max number of favorite places."},
+          {"name": "offset", "type": "int", "required": false, "default": 0, "description": "Number of favorite places to skip."}
+        ],
+        "response": {
+          "status": "200 OK",
+          "body_schema": "List[Place]",
+          "notes": "Returns list of place details."
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/users/me/favorites?limit=10\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+        {
+        "endpoint": "GET /users/me/favorites/ids",
+        "description": "Gets only the list of place IDs favorited by the current user.",
+        "authentication": "Required (Bearer Token)",
+        "method": "GET",
+        "response": {
+          "status": "200 OK",
+          "body_schema": "List[int]"
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/users/me/favorites/ids\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+      {
+        "endpoint": "POST /users/me/favorite-cities/{city_id}",
+        "description": "Marks a city as a favorite (wishlist) for the current user.",
+        "authentication": "Required (Bearer Token)",
+        "method": "POST",
+         "path_params": [
+          {"name": "city_id", "type": "int", "required": true, "description": "ID of the city to favorite.", "example": 2}
+        ],
+        "response": {
+          "status": "200 OK",
+          "notes": "No response body. Returns 404 if city not found."
+        },
+        "example_curl": "curl -v -X POST \"http://localhost:8000/api/v1/users/me/favorite-cities/2\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+      {
+        "endpoint": "DELETE /users/me/favorite-cities/{city_id}",
+        "description": "Removes a city from the current user's favorites.",
+        "authentication": "Required (Bearer Token)",
+        "method": "DELETE",
+         "path_params": [
+          {"name": "city_id", "type": "int", "required": true, "description": "ID of the city to unfavorite.", "example": 2}
+        ],
+        "response": {
+          "status": "204 No Content",
+          "notes": "Returns 404 if city not found or wasn't favorited."
+        },
+        "example_curl": "curl -v -X DELETE \"http://localhost:8000/api/v1/users/me/favorite-cities/2\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+      {
+        "endpoint": "GET /users/me/favorite-cities",
+        "description": "Gets the list of city objects favorited by the current user.",
+        "authentication": "Required (Bearer Token)",
+        "method": "GET",
+         "query_params": [
+          {"name": "limit", "type": "int", "required": false, "default": 100, "description": "Max number of favorite cities."},
+          {"name": "offset", "type": "int", "required": false, "default": 0, "description": "Number of favorite cities to skip."}
+        ],
+        "response": {
+          "status": "200 OK",
+          "body_schema": "List[City]"
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/users/me/favorite-cities?limit=10\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+       {
+        "endpoint": "GET /users/me/favorite-cities/ids",
+        "description": "Gets only the list of city IDs favorited by the current user.",
+        "authentication": "Required (Bearer Token)",
+        "method": "GET",
+        "response": {
+          "status": "200 OK",
+          "body_schema": "List[int]"
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/users/me/favorite-cities/ids\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+      {
+        "endpoint": "POST /users/me/history/{place_id}",
+        "description": "Records that the current user visited details for a specific place.",
+        "authentication": "Required (Bearer Token)",
+        "method": "POST",
+         "path_params": [
+          {"name": "place_id", "type": "int", "required": true, "description": "ID of the place visited.", "example": 522216}
+        ],
+        "response": {
+          "status": "201 Created",
+          "notes": "No response body. Returns 404 if place not found."
+        },
+        "example_curl": "curl -v -X POST \"http://localhost:8000/api/v1/users/me/history/522216\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      },
+      {
+        "endpoint": "GET /users/me/history",
+        "description": "Gets the current user's place visit history.",
+        "authentication": "Required (Bearer Token)",
+        "method": "GET",
+        "query_params": [
+          {"name": "days", "type": "int", "required": false, "default": 30, "description": "Number of past days of history."},
+          {"name": "limit", "type": "int", "required": false, "default": 100, "description": "Max number of history entries."},
+          {"name": "offset", "type": "int", "required": false, "default": 0, "description": "Number of history entries to skip."}
+        ],
+        "response": {
+          "status": "200 OK",
+          "body_schema": "List[VisitHistoryEntry]",
+          "notes": "Each entry includes nested place details and visited_at timestamp."
+        },
+        "example_curl": "curl -X GET \"http://localhost:8000/api/v1/users/me/history?days=7&limit=5\" -H \"Authorization: Bearer YOUR_ACCESS_TOKEN\""
+      }
+    ]
+  }
+}

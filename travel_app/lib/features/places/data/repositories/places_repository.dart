@@ -24,47 +24,75 @@ class PlacesRepository {
 
   PlacesRepository(this._dio);
 
-  Future<PlacesResponse> getBestPlaces({
-    required int cityId,
+  Future<PlacesResponse> getPlacesListByCategory({
     required String category,
-    required String interests,
+    required String
+    interests, // Still ensure this is used if the API expects it
     required int page,
     required int size,
   }) async {
     try {
+      // Ensure your API endpoint and query parameters are correct
+      // The 404 was likely due to missing city_id or interests, or wrong path.
+      // Let's assume you've fixed the endpoint and parameters for the 404.
       final response = await _dio.get(
-        '/places/best-for-you/$cityId', // API endpoint structure
+        '/api/v1/places', // Or your corrected endpoint
         queryParameters: {
+          // 'city_id': cityId, // Assuming API expects this
           'category': category,
-          'interests': interests,
+          // 'interests': interests, // Assuming API expects this
           'page': page,
           'size': size,
         },
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        // Assuming the entire response body is the structure PlacesResponse expects
-        // or that it's nested e.g., response.data['data']
         print(
           "--- Places API Response Data: ${response.data} ---",
         ); // Debugging
-        return PlacesResponse.fromJson(response.data as Map<String, dynamic>);
+
+        // **** MODIFICATION HERE ****
+        if (response.data is List<dynamic>) {
+          final List<dynamic> placesJsonList = response.data as List<dynamic>;
+          final List<Place> placesList =
+              placesJsonList
+                  .map((item) => Place.fromJson(item as Map<String, dynamic>))
+                  .toList();
+
+          // Since the API returns a direct list, pagination info is not in the response body.
+          // You might need to infer it or set defaults.
+          // For example, if the API doesn't give total pages, you might assume only one page
+          // if the returned list length is less than 'size', or handle it differently.
+          return PlacesResponse(
+            places: placesList,
+            totalPages: 1, // Default or inferred value
+            currentPage: page, // The page we requested
+          );
+        } else {
+          // If it's not a list, then something is unexpected with the API response
+          print(
+            "Error: Places API returned data that is not a List: ${response.data.runtimeType}",
+          );
+          throw Exception(
+            'Invalid response format: Expected a List of places.',
+          );
+        }
       } else {
         throw DioException(
           requestOptions: response.requestOptions,
           response: response,
           error: "Failed to fetch places (${response.statusCode})",
+          type: DioExceptionType.badResponse,
         );
       }
     } on DioException catch (e) {
-      print("--- Get Places DioException: ${e.message} ---"); // Debugging
-      if (e.response?.statusCode == 401) {
-        // The interceptor should handle this, but good to log here too
-        print("Unauthorized access to places endpoint.");
+      print("--- Get Places DioException: ${e.message} ---");
+      if (e.response?.data != null) {
+        print("--- DioException Response Body: ${e.response!.data}");
       }
-      rethrow; // Let the caller handle the error UI
+      rethrow;
     } catch (e) {
-      print("--- Get Places Unknown Error: $e ---"); // Debugging
+      print("--- Get Places Unknown Error: $e ---");
       throw Exception("An unexpected error occurred fetching places: $e");
     }
   }
@@ -244,7 +272,9 @@ class PlacesRepository {
   // --- End Dislike a Place ---
   Future<Set<int>> fetchLikedCityIds() async {
     try {
-      print("Fetching liked city IDs: GET /api/v1/cities/me/favorite-cities/ids");
+      print(
+        "Fetching liked city IDs: GET /api/v1/cities/me/favorite-cities/ids",
+      );
       final response = await _dio.get('/api/v1/cities/me/favorite-cities/ids');
 
       if (response.statusCode == 200 && response.data != null) {
@@ -276,8 +306,12 @@ class PlacesRepository {
           print("Successfully fetched liked city IDs (from 'ids' key): $ids");
           return ids.toSet();
         } else {
-          print("Error fetching liked city IDs: Unexpected response data format.");
-          throw Exception("Unexpected response data format for liked city IDs.");
+          print(
+            "Error fetching liked city IDs: Unexpected response data format.",
+          );
+          throw Exception(
+            "Unexpected response data format for liked city IDs.",
+          );
         }
       } else {
         print("Error fetching liked city IDs: Status ${response.statusCode}");
@@ -292,15 +326,19 @@ class PlacesRepository {
       // Consider more specific error handling or remapping here
       if (e.response?.statusCode == 401) {
         // Handle unauthorized specifically if needed
-        print("Unauthorized to fetch liked cities. User might not be logged in.");
+        print(
+          "Unauthorized to fetch liked cities. User might not be logged in.",
+        );
       }
       rethrow;
     } catch (e) {
       print("Unknown error fetching liked city IDs: $e");
-      throw Exception("An unexpected error occurred fetching liked city IDs: $e");
+      throw Exception(
+        "An unexpected error occurred fetching liked city IDs: $e",
+      );
     }
   }
-  
+
   // --- NEW: Like a Place ---
   Future<void> likeCity(int placeId) async {
     try {
